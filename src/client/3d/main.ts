@@ -39,6 +39,7 @@ try { items = JSON.parse($('items').textContent || '[]'); } catch { /* no signs 
 // ?debug&fake=N adds N made-up posts, to see how the layout copes with growth
 const fake = new URLSearchParams(location.search).has('debug') ? Number(new URLSearchParams(location.search).get('fake') ?? 0) : 0;
 for (let i = 0; i < fake; i++) items.push({ kind: 'post', path: `/blog/fake-${i}`, title: `テストの記事 ${i + 1}：少し長めのタイトルで折り返しを確かめる`, date: '2026-01-01', summary: '仮の概要です。'.repeat(4) });
+if (fake) items.sort((a, b) => (b.date ?? '9999').localeCompare(a.date ?? '9999'));
 const layout = ringLayout(items.length);
 const world = new World(layout.plaza);
 const player = new Player(world);
@@ -77,7 +78,8 @@ items.forEach((it, i) => {
   }));
   const prev = items[i - 1];
   if (!prev || yearOf(prev) !== yearOf(it) || layout.slots[i - 1]!.ring !== sl.ring) {
-    sign({ canvas: plaqueCanvas(yearOf(it)), label: '', center: [center[0]!, PLAZA_Y + 1.5, center[2]!], normal, w: 1.1, h: 0.55, offset: 0.76 }); // clear of the block corners when it faces the plaza at an angle
+    // the year's signs go on to the left of this one (the arcs run left to right behind you)
+    sign({ canvas: plaqueCanvas(`← ${yearOf(it)}`), label: '', center: [center[0]!, PLAZA_Y + 1.5, center[2]!], normal, w: 1.1, h: 0.55, offset: 0.76 }); // clear of the block corners when it faces the plaza at an angle
   }
 });
 

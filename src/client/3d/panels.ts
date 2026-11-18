@@ -114,9 +114,13 @@ export function workCanvas(it: Item, stat = ''): HTMLCanvasElement {
   }
   ctx.fillStyle = css('--fg') || '#000';
   ctx.textBaseline = 'top';
-  // long titles get a smaller size so the summary keeps at least two lines
-  ctx.font = `500 ${ctx.measureText(it.title).width > (W - 64) * 1.6 ? 28 : 34}px ${FONT}`;
-  const y = wrap(ctx, it.title, 32, 220, W - 64, 38, 262);
+  // long titles (badges have very long ones) get smaller and more lines, so they are
+  // read to the end; the summary starts below with some air
+  ctx.font = `500 34px ${FONT}`;
+  const long = ctx.measureText(it.title).width / (W - 64);
+  const size = long > 2.6 ? 22 : long > 1.6 ? 27 : 34;
+  ctx.font = `500 ${size}px ${FONT}`;
+  const y = wrap(ctx, it.title, 32, 214, W - 64, size + 6, long > 2.6 ? 290 : 262) + 8;
   ctx.font = `300 20px ${FONT}`;
   ctx.fillStyle = css('--muted') || '#666';
   wrap(ctx, it.summary, 32, y - 6, W - 64, 27, stat ? 300 : 330);
@@ -155,7 +159,7 @@ export function plaqueCanvas(text: string): HTMLCanvasElement {
   const ctx = cv.getContext('2d')!;
   frame(ctx, W, H);
   ctx.fillStyle = css('--fg') || '#000';
-  ctx.font = `300 64px ${FONT}`;
+  ctx.font = `300 56px ${FONT}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(text, W / 2, H / 2 + 4);

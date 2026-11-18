@@ -18,7 +18,7 @@ html.world:not(.popped) .tip:not(:empty){display:block;position:fixed;left:50%;t
 @media (pointer:coarse){html.world:not(.popped) .touch{display:block}}
 .joy{position:fixed;left:1.25rem;bottom:1.5rem;z-index:1;width:7.5rem;height:7.5rem;border:1px solid var(--line);border-radius:50%;background:color-mix(in oklch,var(--bg) 40%,transparent)}
 .joy i{position:absolute;left:50%;top:50%;width:2.75rem;height:2.75rem;margin:-1.375rem;border-radius:50%;background:color-mix(in oklch,var(--line) 60%,transparent)}
-.jump{position:fixed;right:1.25rem;bottom:2.5rem;z-index:1;width:3.5rem;height:3.5rem;padding:0}
+.jump{position:fixed;right:1.25rem;bottom:5.5rem;z-index:1;width:3.5rem;height:3.5rem;padding:0}
 /* the status bar: which way you face, and what the keys do right now */
 .status{position:fixed;left:0;right:0;bottom:0;z-index:3;display:flex;align-items:center;gap:1rem;padding:.55rem 5rem .55rem 1rem;background:color-mix(in oklch,var(--bg) 82%,transparent);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-top:1px solid color-mix(in oklch,var(--line) 40%,transparent);font-size:.85em;color:var(--muted)}
 html:not(.world) .status{display:none}
