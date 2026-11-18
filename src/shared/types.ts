@@ -17,6 +17,7 @@ export interface Work {
   links: Link[];
   image?: string;
   stat?: string;
+  art?: import('./art.ts').Art;
   body: string; // markdown
 }
 

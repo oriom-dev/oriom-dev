@@ -1,6 +1,7 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { parse as parseYaml } from 'yaml';
+import type { Art } from '../shared/art.ts';
 import type { Post, Work } from '../shared/types.ts';
 
 export const ROOT = path.resolve(import.meta.dirname, '../..');
@@ -43,9 +44,15 @@ export function loadWorks(): Work[] {
       links: meta.links ?? [],
       image: meta.image,
       stat: meta.stat,
+      art: loadArt(name),
       body,
     }))
     .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''));
+}
+
+export function loadArt(name: string): Art | undefined {
+  const f = path.join(CONTENT, 'art', `${name}.json`);
+  return existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : undefined;
 }
 
 export const AUTHOR = { name: 'oriom', handle: 'oriom.dev', did: 'did:plc:p4woeawvwwrsvh6mjp5cvufu' };

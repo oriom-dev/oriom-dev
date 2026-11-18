@@ -20,9 +20,12 @@ export function buildSite(): SiteBundle {
 
   for (const d of loadPages()) {
     const p = d.name === 'index' ? '/' : `/${d.name}`;
-    add(page({ path: p, title: String(d.meta.title), description: String(d.meta.description ?? '') }, expand(d.body, ctx)));
+    const meta = { path: p, title: String(d.meta.title), description: String(d.meta.description ?? '') };
+    add(page(meta, expand(d.body, ctx, 'md'), expand(d.body, ctx, 'html')));
   }
-  for (const w of works) add(page({ path: `/works/${w.slug}`, title: w.title, description: w.summary }, workMarkdown(w)));
+  for (const w of works) {
+    add(page({ path: `/works/${w.slug}`, title: w.title, description: w.summary }, workMarkdown(w, 'md'), workMarkdown(w, 'html')));
+  }
   for (const p of posts) {
     add(page({ path: p.path, title: p.title, description: p.description, type: 'article', atUri: p.atUri, published: p.date }, postMarkdown(p)));
   }

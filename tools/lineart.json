@@ -1,0 +1,84 @@
+{
+  "tompedia": {
+    "src": "tompedia.svg",
+    "title": "とんペディアのロゴ",
+    "threshold": 80,
+    "eps": 1.0
+  },
+  "lens": {
+    "src": "lens.png",
+    "title": "LENS のフクロウ",
+    "threshold": 90,
+    "eps": 1.2
+  },
+  "linkm": {
+    "src": "linkm.png",
+    "title": "リンクエムの LM",
+    "threshold": 90,
+    "eps": 1.0
+  },
+  "erb": {
+    "src": "erb.svg",
+    "title": "ドイツ相続法情報室の「ド」",
+    "threshold": 80,
+    "eps": 1.0
+  },
+  "ifg-pathleader": {
+    "src": "ifg-pathleader.png",
+    "title": "IFG Pathleader のアイコン",
+    "threshold": 70,
+    "eps": 1.0
+  },
+  "jisaku": {
+    "src": "jisaku.svg",
+    "title": "Team JISAKU のロゴ",
+    "threshold": 80,
+    "eps": 1.0
+  },
+  "portrait": {
+    "src": "portrait.png",
+    "title": "似顔絵",
+    "mode": "edges",
+    "crop": [
+      0.36,
+      0.06,
+      0.72,
+      0.9
+    ],
+    "lo": 55,
+    "hi": 140,
+    "eps": 1.4,
+    "min_len": 20,
+    "size": 320
+  },
+  "kytos": {
+    "mode": "proc",
+    "fn": "anneal",
+    "title": "エネルギー地形を転がって最小値に落ち着く玉"
+  },
+  "q-sherpa": {
+    "mode": "proc",
+    "fn": "ridge",
+    "title": "山の稜線と山頂の旗"
+  },
+  "mosimo": {
+    "mode": "proc",
+    "fn": "mesh",
+    "title": "電波で投稿を中継していくスマートフォン",
+    "sharp": true
+  },
+  "qr": {
+    "mode": "proc",
+    "fn": "qr",
+    "title": "QR コードの切り出しシンボル",
+    "reorder": true,
+    "sharp": true
+  },
+  "labo-match": {
+    "mode": "proc",
+    "fn": "match",
+    "title": "学生と研究室を結ぶ線",
+    "reorder": true,
+    "sharp": true
+  }
+}

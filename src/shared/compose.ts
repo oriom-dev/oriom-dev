@@ -1,5 +1,6 @@
 // Turns a built page into the bytes that go on the wire. Shared by the server and
 // the service worker so both serve identical single-request pages.
+import { mdPath } from './routes.ts';
 import { fillStatsHtml, fillStatsMd } from './stats.ts';
 import type { PageOut, SiteBundle, Stats, Variant } from './types.ts';
 
@@ -10,7 +11,9 @@ export function composeHtml(site: SiteBundle, page: PageOut, variant: Variant, h
     .replace('<!--@head-->', () => page.head)
     .replace('<!--@body-->', () => fillStatsHtml(page.body, s))
     .replace('<!--@stats-->', () => JSON.stringify(s ?? null).replace(/</g, '\\u003c'))
-    .replaceAll('__HUE__', String(hue));
+    .replaceAll('__HUE__', String(hue))
+    .replaceAll('__MD__', mdPath(page.path))
+    .replaceAll('__PATH__', page.path);
 }
 
 export const composeMd = (page: PageOut, stats?: Stats) => fillStatsMd(page.md, stats);
