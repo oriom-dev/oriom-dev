@@ -1,0 +1,29 @@
+{
+  "name": "oriom-dev",
+  "private": true,
+  "type": "module",
+  "description": "oriom.dev portfolio: one request, under 512 KB, three dimensions",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "node src/build/main.ts",
+    "start": "node src/server/main.ts",
+    "dev": "node src/build/main.ts && node --watch-path=src --watch-path=content src/server/main.ts",
+    "test": "node --test 'test/**/*.test.ts'",
+    "check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "@webgpu/types": "0.1.74",
+    "esbuild": "0.28.2",
+    "typescript": "5.9.3"
+  },
+  "dependencies": {
+    "marked": "18.2.1",
+    "yaml": "2.9.1"
+  },
+  "allowScripts": {
+    "esbuild": false
+  }
+}

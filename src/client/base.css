@@ -1,0 +1,15 @@
+/* Shared by all variants. Colours come from one random hue (--h, set by the server). */
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI","Hiragino Sans","Noto Sans JP",sans-serif;font-weight:300;line-height:1.8;overflow-wrap:anywhere;word-break:normal;line-break:strict}
+a{color:inherit;text-decoration-color:var(--line);text-underline-offset:.2em}
+a:focus-visible,button:focus-visible{outline:2px solid var(--line);outline-offset:2px}
+img,svg,canvas{max-width:100%}
+table{border-collapse:collapse;display:block;overflow-x:auto;max-width:100%}
+th,td{padding:.25em .75em;text-align:left;vertical-align:top}
+pre{overflow-x:auto;max-width:100%}
+code{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:.9em}
+.skip{position:absolute;left:-9999px}.skip:focus{left:1rem;top:1rem;z-index:10;background:var(--bg)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,14rem),1fr));gap:.5rem 1.5rem;margin:1rem 0}
+.stats div{display:flex;flex-direction:column}.stats dt{color:var(--muted);font-size:.85em}.stats dd{margin:0;font-variant-numeric:tabular-nums;font-size:1.25em}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:0s!important;transition-duration:0s!important}}
