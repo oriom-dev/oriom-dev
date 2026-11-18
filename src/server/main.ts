@@ -11,20 +11,26 @@ const stats = startStats(counter, { agentSocket: env.CLUSTER_AGENT_SOCKET });
 const app = new App(counter, stats);
 if (env.NODE_ENV === 'development') app.watch();
 
-// Posts from followed standard.site publications: rebuild the pages (not the templates).
+// Run-time pages: posts from followed standard.site publications, and the Bluesky
+// replies under every post. Only the pages are rebuilt, never the templates.
 if (env.FEEDS !== '0') {
   const { fetchFollowed } = await import('./feeds.ts');
+  const { fetchComments } = await import('./comments.ts');
   const { buildPages } = await import('../build/pages.ts');
   const { loadPosts, loadStandard, loadWorks } = await import('../build/content.ts');
   const refresh = async () => {
     const team = await fetchFollowed(loadStandard().follow);
     const posts = [...loadPosts(), ...team].sort((a, b) => b.date.localeCompare(a.date));
-    app.setPages(buildPages(loadWorks(), posts));
-    if (team.length) console.log(`feeds: ${team.length} posts from followed sites`);
+    const comments: import('../shared/types.ts').Comments = {};
+    for (const p of posts) {
+      if (!p.bsky) continue;
+      try { comments[p.path] = await fetchComments(p.bsky.uri); } catch (e) { console.warn(`comments ${p.path}:`, (e as Error).message); }
+    }
+    app.setPages(buildPages(loadWorks(), posts, comments));
   };
-  const tick = () => refresh().catch((e) => console.warn('feeds:', e));
+  const tick = () => refresh().catch((e) => console.warn('refresh:', e));
   tick();
-  setInterval(tick, 15 * 60_000).unref();
+  setInterval(tick, 10 * 60_000).unref();
 }
 
 // Behind Caddy: trust X-Forwarded-For only from loopback.

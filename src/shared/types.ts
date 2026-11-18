@@ -33,7 +33,21 @@ export interface Post {
   author: { name: string; handle?: string; did?: string };
   external?: string; // canonical URL when the post lives on another site
   atUri?: string; // site.standard.document record
+  bsky?: { uri: string; cid: string }; // its announcement on Bluesky (bskyPostRef): replies are the comments
 }
+
+export interface Comment {
+  uri: string;
+  url: string; // the reply on bsky.app
+  author: { did: string; handle: string; name: string };
+  at: string; // YYYY-MM-DD
+  text: { t: string; href?: string }[];
+  likes: number;
+  replies: Comment[];
+}
+
+/** Comments per post path: the Bluesky thread URL and its replies. */
+export type Comments = Record<string, { url: string; count: number; comments: Comment[] }>;
 
 /** A page as served: everything except the variant template, hue and live stats. */
 export interface PageOut {

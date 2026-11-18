@@ -74,6 +74,7 @@ export async function fetchFollowed(follow: { handle: string; name: string }[]):
           author: { name: f.name, handle: f.handle, did },
           external: base + (typeof v.path === 'string' ? (v.path.startsWith('/') ? v.path : `/${v.path}`) : ''),
           atUri: r.uri,
+          bsky: typeof v.bskyPostRef?.uri === 'string' && v.bskyPostRef.uri.startsWith('at://') ? { uri: v.bskyPostRef.uri, cid: String(v.bskyPostRef.cid ?? '') } : undefined,
         });
       }
     } catch (e) {

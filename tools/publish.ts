@@ -1,7 +1,8 @@
 // Publish the blog to standard.site (AT Protocol) on the account's own PDS.
 //   ATP_APP_PASSWORD=xxxx-xxxx-xxxx-xxxx node tools/publish.ts [--dry-run] [--prune]
-// Creates the site.standard.publication once, then one site.standard.document per
-// post (updated only when it changed). The AT-URIs go to content/standard.json, from
+// Creates the site.standard.publication once, then per post a Bluesky announcement
+// (its replies are the comments; --no-bsky skips it) and a site.standard.document
+// with bskyPostRef (updated only when it changed). The AT-URIs go to content/standard.json, from
 // which the build emits <link rel="site.standard.*"> and /.well-known/site.standard.publication.
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -61,8 +62,36 @@ if (!cfg.publication) {
   }
 }
 
+/** The announcement on Bluesky: its replies become the post's comments (bskyPostRef). */
+async function announce(p: (typeof posts)[number]): Promise<{ uri: string; cid: string }> {
+  const url = ORIGIN + p.path;
+  const text = `${p.title}\n${url}`;
+  const enc = new TextEncoder();
+  const byteStart = enc.encode(`${p.title}\n`).length;
+  const record = {
+    $type: 'app.bsky.feed.post', text, langs: ['ja'], createdAt: new Date().toISOString(),
+    facets: [{ index: { byteStart, byteEnd: byteStart + enc.encode(url).length }, features: [{ $type: 'app.bsky.richtext.facet#link', uri: url }] }],
+    embed: { $type: 'app.bsky.embed.external', external: { uri: url, title: p.title, description: p.description } },
+  };
+  const r = await xrpc(pds, 'com.atproto.repo.createRecord', { token, body: { repo: did, collection: 'app.bsky.feed.post', record } });
+  return { uri: r.uri, cid: r.cid };
+}
+
+const noBsky = process.argv.includes('--no-bsky');
 const posts = loadPosts();
 for (const p of posts) {
+  const prevDoc = cfg.documents[p.slug];
+  let bsky = prevDoc?.bsky;
+  if (!bsky && !noBsky) {
+    if (dry) console.log(`would announce ${p.slug} on Bluesky`);
+    else {
+      bsky = await announce(p);
+      console.log(`  announced ${bsky.uri}`);
+      // saved at once, so a failure below never announces the same post twice
+      cfg.documents[p.slug] = { ...(cfg.documents[p.slug] ?? { uri: '', hash: '' }), bsky };
+      writeFileSync(cfgPath, JSON.stringify(cfg, null, 2) + '\n');
+    }
+  }
   const record = {
     $type: 'site.standard.document',
     site: cfg.publication || 'at://(new publication)',
@@ -73,23 +102,24 @@ for (const p of posts) {
     updatedAt: p.updated ? `${p.updated}T00:00:00.000+09:00` : undefined,
     tags: p.tags.length ? p.tags : undefined,
     textContent: text(p.body),
+    bskyPostRef: bsky,
   };
   const hash = createHash('sha256').update(JSON.stringify(record)).digest('hex').slice(0, 16);
   const prev = cfg.documents[p.slug];
   if (prev?.hash === hash) { console.log(`= ${p.slug}`); continue; }
   if (dry) { console.log(`${prev ? '~' : '+'} ${p.slug}`, record); continue; }
   const collection = 'site.standard.document';
-  const uri = prev
+  const uri = prev?.uri
     ? (await xrpc(pds, 'com.atproto.repo.putRecord', { token, body: { repo: did, collection, rkey: rkeyOf(prev.uri), record } })).uri
     : (await xrpc(pds, 'com.atproto.repo.createRecord', { token, body: { repo: did, collection, record } })).uri;
-  cfg.documents[p.slug] = { uri, hash };
-  console.log(`${prev ? '~' : '+'} ${p.slug} ${uri}`);
+  cfg.documents[p.slug] = { uri, hash, ...(bsky ? { bsky } : {}) };
+  console.log(`${prev?.uri ? '~' : '+'} ${p.slug} ${uri}`);
 }
 
 if (prune) {
   for (const [slug, d] of Object.entries(cfg.documents)) {
     if (posts.some((p) => p.slug === slug)) continue;
-    if (!dry) await xrpc(pds, 'com.atproto.repo.deleteRecord', { token, body: { repo: did, collection: 'site.standard.document', rkey: rkeyOf(d.uri) } });
+    if (!dry && d.uri) await xrpc(pds, 'com.atproto.repo.deleteRecord', { token, body: { repo: did, collection: 'site.standard.document', rkey: rkeyOf(d.uri) } });
     delete cfg.documents[slug];
     console.log(`- ${slug}`);
   }

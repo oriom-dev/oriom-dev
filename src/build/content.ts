@@ -57,7 +57,7 @@ export function loadArt(name: string): Art | undefined {
 
 export interface StandardConfig {
   publication: string;
-  documents: Record<string, { uri: string; hash: string }>;
+  documents: Record<string, { uri: string; hash: string; bsky?: { uri: string; cid: string } }>;
   follow: { handle: string; name: string }[];
 }
 export const loadStandard = (): StandardConfig => JSON.parse(readFileSync(path.join(CONTENT, 'standard.json'), 'utf8'));
@@ -78,6 +78,7 @@ export function loadPosts(): Post[] {
       body,
       author: AUTHOR,
       atUri: standard.documents[name]?.uri,
+      bsky: standard.documents[name]?.bsky,
     }))
     .sort((a, b) => b.date.localeCompare(a.date));
 }

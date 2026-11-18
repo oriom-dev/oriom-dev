@@ -45,3 +45,17 @@ for (const [path, page] of Object.entries(site.pages)) {
     assert.doesNotMatch(md, /<!--@|\{\{/);
   });
 }
+
+test('a post with the maximum number of comments still fits', async () => {
+  const { buildPages } = await import('../src/build/pages.ts');
+  const { loadPosts, loadWorks } = await import('../src/build/content.ts');
+  const posts = loadPosts().map((p) => ({ ...p, bsky: { uri: 'at://did:plc:x/app.bsky.feed.post/y', cid: 'c' } }));
+  const long = 'あ'.repeat(300); // Bluesky posts are at most 300 graphemes
+  const c = (i: number) => ({ uri: `at://x/${i}`, url: 'https://bsky.app/profile/x/post/y', author: { did: 'did:plc:x', handle: 'someone.example.com', name: 'な'.repeat(64) }, at: '2026-11-18', text: [{ t: long }], likes: 0, replies: [] });
+  const comments = Object.fromEntries(posts.map((p) => [p.path, { url: 'https://bsky.app/profile/x/post/y', count: 999, comments: Array.from({ length: 150 }, (_, i) => c(i)) }]));
+  const pages = buildPages(loadWorks(), posts, comments);
+  for (const p of posts) for (const v of VARIANTS) {
+    const size = Buffer.byteLength(composeHtml(site, pages[p.path]!, v, 1, stats));
+    assert.ok(size <= LIMIT, `${p.path} ${v}: ${size}`);
+  }
+});

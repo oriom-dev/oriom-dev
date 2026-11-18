@@ -38,3 +38,8 @@ html.playing .tip:not(:empty){display:block;position:fixed;left:50%;top:calc(50%
 .title-card .t{font-size:76px;font-weight:200;line-height:1.2;margin:0 0 40px;padding-bottom:24px;border-bottom:3px solid var(--line)}
 .title-card ul{list-style:none;padding:0;margin:0;font-size:32px;color:var(--muted);line-height:1.6}
 #view{cursor:grab}#view:active{cursor:grabbing}#view:focus{outline:none}
+.comments ul{list-style:none;padding:0;margin:0}
+.comments ul ul{padding-left:1rem;margin-left:.25rem;border-left:1px solid var(--line)}
+.comments li{margin:.75rem 0}
+.comments .who{margin:0;font-size:.85em;color:var(--muted)}.comments .who b{font-weight:500;color:var(--fg)}
+.comments p{margin:0}

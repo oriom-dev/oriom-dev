@@ -1,5 +1,6 @@
 // Transport-independent request handling: HTTP/1.x–3 (via Caddy), HTTP/0.9 and
 // CoAP all ask `respond` for the same representation of a path.
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, watch } from 'node:fs';
 import path from 'node:path';
 import { randomHue } from '../shared/color.ts';
@@ -76,7 +77,11 @@ export class App {
   load(): void {
     this.site = JSON.parse(readFileSync(path.join(this.distDir, 'site.json'), 'utf8'));
     this.base = this.site.pages;
-    if (this.extra && Object.keys(this.extra).length) this.site.pages = { ...this.base, ...this.extra };
+    this.baseVersion = this.site.version;
+    if (this.extra && Object.keys(this.extra).length) {
+      this.site.pages = { ...this.base, ...this.extra };
+      this.site.version = this.versionWith(this.extra);
+    }
     this.files.clear();
     const add = (route: string, file: string, type: string) => {
       const f = path.join(this.distDir, file);
@@ -98,7 +103,14 @@ export class App {
   /** Pages built at run time (posts from followed sites), merged over the built ones. */
   setPages(pages: Record<string, PageOut>): void {
     this.extra = pages;
-    this.site = { ...this.site, pages: { ...this.base, ...pages } };
+    this.site = { ...this.site, pages: { ...this.base, ...pages }, version: this.versionWith(pages) };
+  }
+
+  private baseVersion = '';
+  /** A new version whenever run-time pages change, so service workers refetch the bundle. */
+  private versionWith(pages: Record<string, PageOut>): string {
+    if (!Object.keys(pages).length) return this.baseVersion;
+    return `${this.baseVersion}-${createHash('sha256').update(JSON.stringify(pages)).digest('hex').slice(0, 8)}`;
   }
 
   private base: Record<string, PageOut> = {};

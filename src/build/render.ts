@@ -1,7 +1,7 @@
 import { Marked } from 'marked';
 import { artAttr, separatePath, type Art } from '../shared/art.ts';
 import { mdPath } from '../shared/routes.ts';
-import type { PageOut, Post, Work } from '../shared/types.ts';
+import type { Comment, Comments, PageOut, Post, Work } from '../shared/types.ts';
 import { AUTHOR, loadStandard } from './content.ts';
 
 export const ORIGIN = 'https://oriom.dev';
@@ -104,12 +104,39 @@ const plain = (s: string, target: Target) =>
     ? s.split(/\n{2,}/).map((para) => `<p>${esc(para).replace(/\n/g, '<br>')}</p>`).join('\n\n')
     : s;
 
-export function postMarkdown(p: Post, target: Target = 'md'): string {
+function commentsMd(cs: Comment[], depth = 0): string {
+  const pad = '  '.repeat(depth);
+  return cs.map((c) => {
+    const text = c.text.map((s) => (s.href ? `[${mdText(s.t)}](${s.href})` : mdText(s.t))).join('').replace(/\n+/g, ' ');
+    return `${pad}- **${mdText(c.author.name)}**（@${c.author.handle}・[${c.at}](${c.url})）${text}${c.replies.length ? `\n${commentsMd(c.replies, depth + 1)}` : ''}`;
+  }).join('\n');
+}
+
+function commentsHtml(cs: Comment[]): string {
+  return `<ul>${cs.map((c) => `<li><p class="who"><b>${esc(c.author.name)}</b> <a href="${esc(c.url)}">@${esc(c.author.handle)}・<time datetime="${esc(c.at)}">${esc(c.at)}</time></a></p>`
+    + `<p>${c.text.map((s) => (s.href ? `<a href="${esc(s.href)}" rel="nofollow ugc">${esc(s.t)}</a>` : esc(s.t))).join('').replace(/\n/g, '<br>')}</p>`
+    + `${c.replies.length ? commentsHtml(c.replies) : ''}</li>`).join('')}</ul>`;
+}
+
+/** The comment section: replies to the post's Bluesky announcement. */
+export function commentSection(c: Comments[string] | undefined, target: Target): string {
+  if (!c) return '';
+  const head = `## コメント（${c.count}）`;
+  const shown = (cs: Comment[]): number => cs.reduce((n, x) => n + 1 + shown(x.replies), 0);
+  const more = c.count > shown(c.comments) ? `ほかの ${c.count - shown(c.comments)} 件は Bluesky で読めます。 ` : '';
+  const reply = `${more}[Bluesky で返信する →](${c.url})`;
+  const none = '_まだコメントはありません。Bluesky で返信すると、ここに表示されます。_';
+  if (target === 'md') return `${head}\n\n${c.count ? commentsMd(c.comments) : none}\n\n${reply}`;
+  return `${head}\n\n<div class="comments">${c.count ? commentsHtml(c.comments) : `<p><em>まだコメントはありません。Bluesky で返信すると、ここに表示されます。</em></p>`}</div>\n\n${reply}`;
+}
+
+export function postMarkdown(p: Post, target: Target = 'md', comments?: Comments[string]): string {
   const by = p.author.did === AUTHOR.did ? '' : `・${p.author.name}`;
   const ext = p.external ? `\n\n元の記事：<${p.external}>` : '';
   const body = p.external ? plain(p.body, target) : p.body;
   const title = p.external && target === 'html' ? esc(p.title) : p.title;
-  return `# ${title}\n\n${p.date}${by}${p.tags.length ? `・${p.tags.map((t) => `#${target === 'html' ? esc(t) : t}`).join(' ')}` : ''}\n\n${body}${ext}\n\n[← 記事一覧](/blog)`;
+  const cs = commentSection(comments ?? (p.bsky ? { url: `https://bsky.app/profile/${p.bsky.uri.split('/')[2]}/post/${p.bsky.uri.split('/').pop()}`, count: 0, comments: [] } : undefined), target);
+  return `# ${title}\n\n${p.date}${by}${p.tags.length ? `・${p.tags.map((t) => `#${target === 'html' ? esc(t) : t}`).join(' ')}` : ''}\n\n${body}${ext}${cs && `\n\n${cs}`}\n\n[← 記事一覧](/blog)`;
 }
 
 export interface HeadMeta { path: string; title: string; description: string; type?: 'website' | 'article'; atUri?: string; published?: string }
