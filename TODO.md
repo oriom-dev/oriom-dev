@@ -25,7 +25,8 @@ oriom.dev の作業メモ。README はプロフィール用なので、進捗は
 
 ## 待ち（判断が必要）
 
-- [ ] 公開：GitHub への push、クラスタのデプロイ、Cloudflare の DNS（プロキシはオフ）
+- [x] 公開：GitHub への push、クラスタのデプロイ、Cloudflare の DNS（プロキシはオフ）。2026-11-18 公開
+- [ ] www.oriom.dev の DNS（A・AAAA、プロキシはオフ）
 - [ ] standard.site への初回公開：`ATP_APP_PASSWORD=… node tools/publish.ts`（全体の完成後）
 - [ ] Open Badges の受領者の証明（検証機能はいったん外した）
 
