@@ -17,7 +17,7 @@ tags: [portfolio, web, webgpu, atproto]
 
 - どのページも 1 回のリクエストで完結し、512 KB に収まる
 - 末尾に `.md` を付けると Markdown 版が返る
-- HTTP/0.9 から HTTP/3、CoAP まで読める
+- HTTP/0.9 から HTTP/3、CoAP、Gopher、Gemini で読める
 - Service Worker で完全にオフラインでも動く
 - 記事は [standard.site](https://standard.site) のレコードとして AT Protocol に載る
 

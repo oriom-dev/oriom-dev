@@ -2,6 +2,8 @@
 #   HTTP/1.0–3  Caddy (TLS, h2, h3) -> 127.0.0.1:${port}
 #   HTTP/0.9    caddy-l4 on :80 sends non-HTTP/1.x requests -> 127.0.0.1:${http09Port}
 #   CoAP        UDP ${coapPort}, published directly
+#   Gopher      TCP ${gopherPort} (7070 in the container: it runs without privileges)
+#   Gemini      TCP ${geminiPort}, TLS with a long-lived self-signed certificate (TOFU)
 self:
 { config, lib, pkgs, ... }:
 let
@@ -25,6 +27,8 @@ in
     port = lib.mkOption { type = lib.types.port; default = 3020; description = "Loopback HTTP port Caddy proxies to."; };
     http09Port = lib.mkOption { type = lib.types.port; default = 3021; description = "Loopback port for HTTP/0.9 (PROXY protocol v2 from caddy-l4)."; };
     coapPort = lib.mkOption { type = lib.types.nullOr lib.types.port; default = 5683; description = "Public UDP port for CoAP; null disables it."; };
+    gopherPort = lib.mkOption { type = lib.types.nullOr lib.types.port; default = 70; description = "Public TCP port for Gopher; null disables it."; };
+    geminiPort = lib.mkOption { type = lib.types.nullOr lib.types.port; default = 1965; description = "Public TCP port for Gemini; null disables it."; };
     caddyLayer4 = lib.mkOption {
       type = lib.types.bool;
       default = false;
@@ -48,7 +52,9 @@ in
       ports = [
         "127.0.0.1:${toString cfg.port}:8080/tcp"
         "127.0.0.1:${toString cfg.http09Port}:8091/tcp"
-      ] ++ lib.optionals (cfg.coapPort != null) [ "${toString cfg.coapPort}:5683/udp" ];
+      ] ++ lib.optionals (cfg.coapPort != null) [ "${toString cfg.coapPort}:5683/udp" ]
+        ++ lib.optionals (cfg.gopherPort != null) [ "${toString cfg.gopherPort}:7070/tcp" ]
+        ++ lib.optionals (cfg.geminiPort != null) [ "${toString cfg.geminiPort}:1965/tcp" ];
       volumes = [ "${app}:/app:ro" "/var/lib/oriom-dev:/state" ]
         ++ lib.optional (cfg.agentSocket != null) "${dirOf cfg.agentSocket}:${dirOf cfg.agentSocket}:ro";
       environment = {
@@ -57,6 +63,8 @@ in
         HTTP09_LISTEN = "0.0.0.0:8091";
         STATE_DIR = "/state";
       } // lib.optionalAttrs (cfg.coapPort != null) { COAP_PORT = "5683"; }
+        // lib.optionalAttrs (cfg.gopherPort != null) { GOPHER_LISTEN = "0.0.0.0:7070"; GOPHER_HOST = cfg.domain; GOPHER_PORT = toString cfg.gopherPort; }
+        // lib.optionalAttrs (cfg.geminiPort != null) { GEMINI_LISTEN = "0.0.0.0:1965"; GEMINI_CERT = "/state/gemini/cert.pem"; GEMINI_KEY = "/state/gemini/key.pem"; }
         // lib.optionalAttrs (cfg.agentSocket != null) { CLUSTER_AGENT_SOCKET = cfg.agentSocket; };
       extraOptions = [
         "--read-only"
@@ -71,6 +79,22 @@ in
     };
 
     networking.firewall.allowedUDPPorts = lib.optional (cfg.coapPort != null) cfg.coapPort;
+    networking.firewall.allowedTCPPorts = lib.optional (cfg.gopherPort != null) cfg.gopherPort
+      ++ lib.optional (cfg.geminiPort != null) cfg.geminiPort;
+
+    # Gemini clients pin the certificate on first use, so it is made once and kept
+    # (100 years). It is not the web certificate; Caddy keeps that one to itself.
+    systemd.services.podman-oriom-dev.preStart = lib.mkIf (cfg.geminiPort != null) ''
+      dir=/var/lib/oriom-dev/gemini
+      if [ ! -s "$dir/cert.pem" ]; then
+        install -d -m 0750 -o 65534 -g ${toString (if cfg.agentGid == null then 65534 else cfg.agentGid)} "$dir"
+        ${pkgs.openssl}/bin/openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -days 36500 -nodes \
+          -subj "/CN=${cfg.domain}" -addext "subjectAltName=DNS:${cfg.domain}" \
+          -keyout "$dir/key.pem" -out "$dir/cert.pem"
+        chown 65534 "$dir/key.pem" "$dir/cert.pem"
+        chmod 0400 "$dir/key.pem"
+      fi
+    '';
 
     services.caddy.virtualHosts = {
       # Plain HTTP is served, not redirected: .dev is HSTS-preloaded, so browsers use

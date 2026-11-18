@@ -65,3 +65,16 @@ if (env.COAP_PORT) {
   const { coapServer } = await import('./coap.ts');
   coapServer(app, () => JSON.stringify(stats())).listen(Number(env.COAP_PORT), () => console.log(`coap on udp/${env.COAP_PORT}`));
 }
+
+if (env.GOPHER_LISTEN) {
+  const [h, p] = env.GOPHER_LISTEN.split(/:(?=\d+$)/) as [string, string];
+  const { gopherServer } = await import('./gopher.ts');
+  gopherServer(app, env.GOPHER_HOST ?? 'oriom.dev', Number(env.GOPHER_PORT ?? 70)).listen(Number(p), h, () => console.log(`gopher on ${h}:${p}`));
+}
+
+if (env.GEMINI_LISTEN && env.GEMINI_CERT && env.GEMINI_KEY) {
+  const [h, p] = env.GEMINI_LISTEN.split(/:(?=\d+$)/) as [string, string];
+  const { readFileSync } = await import('node:fs');
+  const { geminiServer } = await import('./gemini.ts');
+  geminiServer(app, { cert: readFileSync(env.GEMINI_CERT), key: readFileSync(env.GEMINI_KEY) }).listen(Number(p), h, () => console.log(`gemini on ${h}:${p}`));
+}

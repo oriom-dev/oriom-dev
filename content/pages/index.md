@@ -26,6 +26,6 @@ Web、モバイル、バックエンド、クラウド、セキュリティ。�
 
 このページは、1 回のリクエストで完結し 512 KB に収まります。アクセスするたびに、[1 次元・2 次元・3 次元](/blog/three-dimensions) のどれかのデザインで表示されます。
 末尾に `.md` を付けると Markdown 版が返ります（このページは [/index.md](/index.md)）。
-HTTP/0.9 から HTTP/3、そして CoAP でも読めます。
+HTTP/0.9 から HTTP/3、CoAP、Gopher、Gemini でも読めます。
 
 {{links}}

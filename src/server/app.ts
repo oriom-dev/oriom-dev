@@ -16,7 +16,7 @@ export interface Req {
   cookie?: string | null;
   accept?: string | null;
   client?: string; // remote address, only for de-duplicating the counter
-  protocol: 'http' | 'http/0.9' | 'coap';
+  protocol: 'http' | 'http/0.9' | 'coap' | 'gopher' | 'gemini';
 }
 
 export interface Reply {
@@ -110,6 +110,24 @@ export class App {
       clearTimeout(t);
       t = setTimeout(() => { try { this.load(); console.log(`reloaded ${this.site.version}`); } catch (e) { console.warn(e); } }, 200);
     });
+  }
+
+  /** The Markdown of a page, for the text protocols (Gopher, Gemini). Counts the visit. */
+  markdown(rawPath: string, client?: string, protocol = 'text'): { status: 200 | 404 } & { body: string } | { status: 301; location: string } {
+    const r = resolve(rawPath.replace(/\.gmi$/, '.md'));
+    if (r.kind === 'redirect') return { status: 301, location: r.location };
+    const page = this.site.pages[r.path];
+    if (page) this.counter.hit(r.path, client ?? '', protocol);
+    return { status: page ? 200 : 404, body: composeMd(page ?? NOT_FOUND, this.stats()) };
+  }
+
+  statsJson = () => JSON.stringify(this.stats());
+
+  /** Page paths and titles under a prefix, newest first as built ("/works", "/blog"). */
+  list(prefix: string): { path: string; title: string }[] {
+    return Object.values(this.site.pages)
+      .filter((p) => p.path.startsWith(`${prefix}/`))
+      .map((p) => ({ path: p.path, title: p.title }));
   }
 
   respond(req: Req): Reply {
