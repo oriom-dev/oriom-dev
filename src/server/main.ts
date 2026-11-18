@@ -44,3 +44,8 @@ if (env.HTTP09_LISTEN) {
   const [h, p] = env.HTTP09_LISTEN.split(/:(?=\d+$)/) as [string, string];
   http09Server(app).listen(Number(p), h, () => console.log(`http/0.9 on ${h}:${p}`));
 }
+
+if (env.COAP_PORT) {
+  const { coapServer } = await import('./coap.ts');
+  coapServer(app, () => JSON.stringify(stats())).listen(Number(env.COAP_PORT), () => console.log(`coap on udp/${env.COAP_PORT}`));
+}
