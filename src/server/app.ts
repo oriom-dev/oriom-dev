@@ -83,6 +83,8 @@ export class App {
     add('/sw.js', 'sw.js', 'text/javascript; charset=utf-8');
     add('/manifest.webmanifest', 'manifest.webmanifest', 'application/manifest+json');
     add('/icon.svg', 'icon.svg', 'image/svg+xml');
+    add('/icon-192.png', 'icon-192.png', 'image/png');
+    add('/icon-512.png', 'icon-512.png', 'image/png');
     add('/robots.txt', 'robots.txt', 'text/plain; charset=utf-8');
     add('/sitemap.xml', 'sitemap.xml', 'application/xml');
     add('/llms.txt', 'llms.txt', 'text/plain; charset=utf-8');
@@ -131,7 +133,7 @@ export class App {
     if (wantsMd) {
       return {
         status,
-        headers: { 'content-type': 'text/markdown; charset=utf-8', 'cache-control': 'public, max-age=60', vary: 'accept', ...SECURITY },
+        headers: { 'content-type': 'text/markdown; charset=utf-8', 'cache-control': 'public, max-age=60', vary: 'accept', 'x-site-version': this.site.version, ...SECURITY },
         body: composeMd(p, this.stats()),
       };
     }
@@ -146,6 +148,7 @@ export class App {
         vary: 'accept, cookie, user-agent',
         link: `<${r.path === '/' ? '/index.md' : `${r.path}.md`}>; rel="alternate"; type="text/markdown"`,
         'content-security-policy': csp(this.site, variant),
+        'x-site-version': this.site.version,
         ...SECURITY,
       },
       body: composeHtml(this.site, p, variant, randomHue(), this.stats()),
