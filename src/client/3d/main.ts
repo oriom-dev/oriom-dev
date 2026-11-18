@@ -85,19 +85,24 @@ const lampSign = sign({ canvas: labelCanvas('クラスタ', '読み込み中…'
 const numSign = sign({ canvas: labelCanvas('いまの数字', '読み込み中…'), href: '/stats', label: 'いま動いているものを開く', center: [6.5, PLAZA_Y + 2.55, -5], normal: [0, 0, 1], w: 3.2, h: 1 });
 
 const FOVY = 1.15;
-/** How far back to stand so a sign `w` wide fits the screen (phones are narrow). */
-const fitDistance = (w: number) => {
+/** How far back to stand so a sign `w` wide whose top is `top` fits the screen both
+ *  ways (phones are narrow, desktops are short). */
+const fitDistance = (w: number, top: number) => {
   const half = Math.atan(Math.tan(FOVY / 2) * (innerWidth / innerHeight));
-  return Math.max(3.4, (w / 2 + 0.4) / Math.tan(half));
+  const across = (w / 2 + 0.4) / Math.tan(half);
+  const up = (top - (PLAZA_Y + 1 + player.eye) + 0.4) / Math.tan(FOVY / 2);
+  return Math.max(3.4, across, up);
 };
-// the spawn: the whole title sign in view
-player.p = [0.5, PLAZA_Y + 1, titleSign.center[2]! + fitDistance(titleSign.w)];
+const topOf = (s: Sign) => s.center[1]! + s.h / 2;
+// the spawn: the whole title sign in view, with its two labels on wide screens
+const spanW = innerWidth > innerHeight ? 8.1 - -6.1 + 1.2 : titleSign.w;
+player.p = [0.5, PLAZA_Y + 1, titleSign.center[2]! + fitDistance(spanW, topOf(titleSign))];
 
 /** Opened by URL: stand in front of that page's sign (the popup is already open). */
 function spawnAt(path: string): void {
   const s = signs.find((x) => x.href === path && x !== titleSign);
   if (!s) return;
-  const d = fitDistance(s.w);
+  const d = fitDistance(s.w, topOf(s));
   player.p = [s.center[0]! + s.normal[0]! * d, PLAZA_Y + 1, s.center[2]! + s.normal[2]! * d];
   player.yaw = Math.atan2(s.normal[0]!, s.normal[2]!);
   player.pitch = 0;
