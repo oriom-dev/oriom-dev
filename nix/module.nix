@@ -69,6 +69,8 @@ in
         LISTEN = "0.0.0.0:8080";
         HTTP09_LISTEN = "0.0.0.0:8091";
         STATE_DIR = "/state";
+        # the published ports are on the host's loopback only: everything comes from Caddy
+        TRUST_PROXY = "1";
       } // lib.optionalAttrs (cfg.coapPort != null) { COAP_PORT = "5683"; }
         // lib.optionalAttrs (cfg.gopherPort != null) { GOPHER_LISTEN = "0.0.0.0:7070"; GOPHER_HOST = cfg.domain; GOPHER_PORT = toString cfg.gopherPort; }
         // lib.optionalAttrs (cfg.geminiPort != null) { GEMINI_LISTEN = "0.0.0.0:1965"; GEMINI_CERT = "/state/gemini/cert.pem"; GEMINI_KEY = "/state/gemini/key.pem"; }

@@ -50,8 +50,11 @@ if (env.FEEDS !== '0') {
   app.onRefresh = () => void tick(); // the admin page asks after it writes
 }
 
-// Behind Caddy: trust X-Forwarded-For and -Proto only from loopback.
-const loopback = (req: http.IncomingMessage) => /^(::ffff:)?127\.|^::1$/.test(req.socket.remoteAddress ?? '');
+// Behind Caddy: trust X-Forwarded-For and -Proto only from it. Directly on this machine
+// that is loopback; in the container (TRUST_PROXY=1), whose port is published on the
+// host's loopback only, every connection comes through the container network from Caddy.
+const TRUST_PROXY = env.TRUST_PROXY === '1';
+const loopback = (req: http.IncomingMessage) => TRUST_PROXY || /^(::ffff:)?127\.|^::1$/.test(req.socket.remoteAddress ?? '');
 const clientOf = (req: http.IncomingMessage) => {
   const remote = req.socket.remoteAddress ?? '';
   const fwd = req.headers['x-forwarded-for'];
@@ -59,7 +62,7 @@ const clientOf = (req: http.IncomingMessage) => {
 };
 /** Over TLS: Caddy says so; in development, a browser on this machine (a secure context). */
 const secureOf = (req: http.IncomingMessage) =>
-  loopback(req) && (req.headers['x-forwarded-proto'] === 'https' || (env.NODE_ENV === 'development' && !req.headers['x-forwarded-for']));
+  loopback(req) && (req.headers['x-forwarded-proto'] === 'https' || (!TRUST_PROXY && env.NODE_ENV === 'development' && !req.headers['x-forwarded-for']));
 
 const server = http.createServer((req, res) => {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
