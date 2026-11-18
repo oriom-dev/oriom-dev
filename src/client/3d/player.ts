@@ -2,6 +2,8 @@
 // swimming and an optional fly mode.
 import type { World } from './world.ts';
 
+const JUMP = 8.6; // 1.3 blocks high under the gravity of 28
+
 export class Player {
   p = [0.5, 40, 3.5];
   v = [0, 0, 0];
@@ -40,7 +42,7 @@ export class Player {
       if (up) this.v[1] = 3.2;
     } else {
       this.v[1] = Math.max(this.v[1]! - 28 * dt, -50);
-      if (up && this.onGround) this.v[1] = 8.6;
+      if (up && this.onGround) this.v[1] = JUMP;
     }
     this.onGround = false;
     for (let axis = 0; axis < 3; axis++) {
@@ -48,10 +50,10 @@ export class Player {
       next[axis]! += this.v[axis]! * dt;
       if (this.collides(next[0]!, next[1]!, next[2]!)) {
         if (axis === 1 && this.v[1]! < 0) this.onGround = true;
-        // step up one block when walking into a ledge
-        if (axis !== 1 && this.onGroundish() && !this.collides(next[0]!, next[1]! + 1.01, next[2]!) && !this.fly) {
-          this.p[axis] = next[axis]!;
-          this.p[1]! += 1.01;
+        // walking into a one-block ledge with room above it: jump, exactly as Space does
+        // (no teleport), and keep pushing forward so the jump carries onto it
+        if (axis !== 1 && !this.fly && this.onGroundish() && !this.collides(next[0]!, next[1]! + 1.01, next[2]!)) {
+          if (this.v[1]! <= 0) this.v[1] = inWater ? 5 : JUMP; // in water (gravity 10) 5 is the same 1.25 blocks
           continue;
         }
         this.v[axis] = 0;

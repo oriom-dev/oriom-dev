@@ -46,7 +46,20 @@ export class World {
     return { h, temp, wet, mountain };
   }
 
+  // collisions ask for the same columns frame after frame (and leafAt for 25 at a time)
+  private columns = new Map<number, Column>();
   column(x: number, z: number): Column {
+    const key = (x + 0x8000) * 0x10000 + (z + 0x8000);
+    let c = this.columns.get(key);
+    if (!c) {
+      if (this.columns.size > 50_000) this.columns.clear();
+      c = this.computeColumn(x, z);
+      this.columns.set(key, c);
+    }
+    return c;
+  }
+
+  private computeColumn(x: number, z: number): Column {
     const w = this.blend(x, z);
     const a = this.shape(x, z, FIXED_SEED);
     const s = w > 0 ? this.shape(x, z, this.seed) : a;
@@ -121,8 +134,22 @@ export class World {
     if (o !== undefined) return SOLID(o);
     const c = this.column(x, z);
     if (y <= c.h) return true;
-    if (c.tree && y <= c.h + c.tree) {
-      return true; // trunk (crowns are not solid enough to stand in; we walk through leaves)
+    if (c.tree && y <= c.h + c.tree) return true; // trunk
+    return this.leafAt(x, y, z); // leaves are solid too: no walking with one's head in a crown
+  }
+
+  /** The crowns of generate(), from the trees within two columns. */
+  private leafAt(x: number, y: number, z: number): boolean {
+    for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) {
+      const c = this.column(x - dx, z - dz);
+      if (!c.tree) continue;
+      const t = c.h + c.tree, dy = y - t;
+      if (dy === 2) { if (dx === 0 && dz === 0) return true; continue; }
+      if (dy < -2 || dy > 1) continue;
+      const r = dy < 0 ? 2 : 1;
+      if (Math.abs(dx) > r || Math.abs(dz) > r) continue;
+      if (Math.abs(dx) === r && Math.abs(dz) === r && (dy === 1 || hash(x, z, t + dy) < 0.5)) continue;
+      return true;
     }
     return false;
   }

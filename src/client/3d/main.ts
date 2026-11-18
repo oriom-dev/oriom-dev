@@ -331,11 +331,12 @@ $('jump').addEventListener('pointerup', () => (jumpHeld = false));
 
 // ---------------------------------------------------------------- night vision
 let night = false;
-const nvButton = $('nv');
+const nvButton = $('nv'), nvTouch = $('nvt'); // the status bar's, and the phone's above the jump
 function toggleNight(): void {
   night = !night;
-  nvButton.setAttribute('aria-pressed', String(night));
+  for (const b of [nvButton, nvTouch]) b.setAttribute('aria-pressed', String(night));
 }
+nvTouch.addEventListener('click', toggleNight);
 nvButton.addEventListener('click', () => { toggleNight(); canvas.focus({ preventScroll: true }); });
 
 // ---------------------------------------------------------------- compass
@@ -442,6 +443,7 @@ async function start(): Promise<void> {
     u.set([...s.horizon, s.dusk * 0.75], 44);
     u.set([0.2 + 0.4 * s.day, 1 - s.day, night ? 1 : 0, 0], 48);
     u.set([...s.moon, 0], 52);
+    u.set([canvas.width, canvas.height, 0, 0], 56);
     const f = forward(player.yaw, 0);
     r.render(u, (cx, cz) => {
       const dx = (cx + 0.5) * CS - eye[0]!, dz = (cz + 0.5) * CS - eye[2]!;
