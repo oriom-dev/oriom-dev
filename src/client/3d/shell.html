@@ -1,11 +1,16 @@
 <canvas id="view" aria-label="ブロックの世界。広場の看板から各ページを開けます。キーボードで歩けます。"></canvas>
+<header class="bar">
+  <a class="name" href="/">oriom.dev</a>
+  <a class="meters-link" href="/stats" aria-label="クラスタの状態"><!--@stats:meters--></a>
+  <a class="switch" href="__PATH__?v=2d" rel="nofollow" aria-label="2 次元で見る">2D</a>
+</header>
 <div class="cross" aria-hidden="true"></div>
 <p id="tip" class="tip" aria-live="polite"></p>
 <footer class="status" id="home">
   <span class="compass" aria-label="向いている方角"><i id="needle">▲</i><b id="heading">北</b></span>
-  <span id="keys" class="keys">WASD で歩く・ドラッグで見回す・看板をクリックで開く</span>
+  <span id="keys" class="keys"></span>
+  <button type="button" id="nv" class="nv" aria-pressed="false"><kbd>N</kbd>暗視</button>
 </footer>
-<a class="switch" href="__PATH__?v=2d" rel="nofollow" aria-label="2 次元で見る">2D</a>
 <div class="touch" aria-hidden="true"><div id="joy" class="joy"><i></i></div><button type="button" id="jump" class="btn jump" tabindex="-1">▲</button></div>
 <script type="application/json" id="items"><!--@items--></script>
 <template id="intro"><!--@intro--></template>

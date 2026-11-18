@@ -117,7 +117,7 @@ export function buildThread(root: HTMLElement): string {
     pen.to([lane(), y]);
   };
 
-  const sel = '#c h1,#c h2,#c li,#c table,#c pre,#c dl.stats[data-stats="full"],#c blockquote,.pop-end';
+  const sel = '#c h1,#c h2,#c li,#c table,#c pre,#c .cluster dl,#c blockquote,.pop-end';
   for (const el of root.querySelectorAll(sel)) {
     const b = box(el);
     const gapAbove = parseFloat(getComputedStyle(el).marginTop) || 12;

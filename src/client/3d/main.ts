@@ -4,6 +4,7 @@ import { oklchToLinearSrgb } from '../../shared/color.ts';
 import { bytes } from '../../shared/stats.ts';
 import type { Item, Stats } from '../../shared/types.ts';
 import { NO3D_COOKIE } from '../../shared/variant.ts';
+import { sortKey } from '../../shared/compose.ts';
 import { boot, readStats } from '../common.ts';
 import { initPopup } from '../popup/popup.ts';
 import { webgl2 } from './gl.ts';
@@ -38,9 +39,17 @@ let items: Item[] = [];
 try { items = JSON.parse($('items').textContent || '[]'); } catch { /* no signs */ }
 // ?debug&fake=N adds N made-up posts, to see how the layout copes with growth
 const fake = new URLSearchParams(location.search).has('debug') ? Number(new URLSearchParams(location.search).get('fake') ?? 0) : 0;
-for (let i = 0; i < fake; i++) items.push({ kind: 'post', path: `/blog/fake-${i}`, title: `テストの記事 ${i + 1}：少し長めのタイトルで折り返しを確かめる`, date: '2026-01-01', summary: '仮の概要です。'.repeat(4) });
-if (fake) items.sort((a, b) => (b.date ?? '9999').localeCompare(a.date ?? '9999'));
-const layout = ringLayout(items.length);
+// (one a month back from today, so they spread over the years like real posts)
+for (let i = 0; i < fake; i++) {
+  const d = new Date(); d.setMonth(d.getMonth() - i);
+  items.push({ kind: 'post', path: `/blog/fake-${i}`, title: `テストの記事 ${i + 1}：少し長めのタイトルで折り返しを確かめる`, date: d.toISOString().slice(0, 10), summary: '仮の概要です。'.repeat(4) });
+}
+if (fake) items.sort((a, b) => sortKey(b).localeCompare(sortKey(a)));
+// a free seat between years, so each year reads as its own stretch
+const yearOf = (it: Item) => (it.date ?? '').slice(0, 4) || String(new Date().getFullYear());
+const seq: (Item | null)[] = [];
+items.forEach((it, i) => { if (i && yearOf(items[i - 1]!) !== yearOf(it)) seq.push(null); seq.push(it); });
+const layout = ringLayout(seq.length);
 const world = new World(layout.plaza);
 const player = new Player(world);
 if (new URLSearchParams(location.search).has('debug')) Object.assign(window, { __player: player, __keys: () => keys, __signs: () => signs });
@@ -57,16 +66,18 @@ const post = (x: number, z: number, top: number) => { for (let y = PLAZA_Y + 1; 
 
 // straight ahead: the name, and where its owner belongs (the top page's first list)
 const intro = document.querySelector<HTMLTemplateElement>('template#intro')?.content;
-const affiliations = [...(intro?.querySelectorAll('h1 + ul > li') ?? [])].map((li) => li.textContent?.trim() ?? '').filter(Boolean);
+const affiliations = [...(intro?.querySelectorAll('ul:first-of-type > li') ?? [])].map((li) => li.textContent?.trim() ?? '').filter(Boolean);
 const card = titleCard('oriom.dev', affiliations);
 const titleSign = sign({ canvas: cardCanvas(card), label: '', center: [0.5, PLAZA_Y + 3.7, -5], normal: [0, 0, 1], w: 5.6, h: 4.2 });
 post(-2, -6, PLAZA_Y + 1); post(2, -6, PLAZA_Y + 1);
 
 // works, posts and badges, newest first, round the arcs; each year starts with a plaque
-const yearOf = (it: Item) => (it.date ?? '').slice(0, 4) || String(new Date().getFullYear());
 const itemSigns: Sign[] = [];
-items.forEach((it, i) => {
-  const sl = layout.slots[i]!;
+let prevSeat = -1;
+seq.forEach((it, k) => {
+  if (!it) return;
+  const i = itemSigns.length;
+  const sl = layout.slots[k]!;
   const bx = Math.floor(sl.x), bz = Math.floor(sl.z);
   post(bx, bz, PLAZA_Y + 1);
   const center = [bx + 0.5, PLAZA_Y + 3.05, bz + 0.5], normal = [sl.nx, 0, sl.nz];
@@ -77,7 +88,9 @@ items.forEach((it, i) => {
     center, normal, w: 2.4, h: 1.8,
   }));
   const prev = items[i - 1];
-  if (!prev || yearOf(prev) !== yearOf(it) || layout.slots[i - 1]!.ring !== sl.ring) {
+  const prevRing = prevSeat < 0 ? -1 : layout.slots[prevSeat]!.ring;
+  prevSeat = k;
+  if (!prev || yearOf(prev) !== yearOf(it) || prevRing !== sl.ring) {
     // the year's signs go on to the left of this one (the arcs run left to right behind you)
     sign({ canvas: plaqueCanvas(`← ${yearOf(it)}`), label: '', center: [center[0]!, PLAZA_Y + 1.5, center[2]!], normal, w: 1.1, h: 0.55, offset: 0.76 }); // clear of the block corners when it faces the plaza at an angle
   }
@@ -215,12 +228,11 @@ let jumpHeld = false;
 const MOVE = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 const locked = () => document.pointerLockElement === canvas;
 const keysText = $('keys');
+const K = (keys: string[], what: string) => `<span>${keys.map((k) => `<kbd>${k}</kbd>`).join('')}${what}</span>`;
 const setKeys = () => {
-  keysText.textContent = mobile
-    ? '左下で歩く・右側で見回す・看板をタップで開く'
-    : locked()
-      ? 'マウスで見回す・WASD で歩く・Space でジャンプ・F で飛ぶ・クリックで看板を開く・Esc でマウスを解放'
-      : 'WASD で歩くとマウスで見回せます・ドラッグでも見回せます・看板をクリックで開く';
+  keysText.innerHTML = locked()
+    ? [K(['W', 'A', 'S', 'D'], '歩く'), K(['マウス'], '見回す'), K(['Space'], 'ジャンプ'), K(['クリック'], '開く'), K(['Esc'], 'マウスを解放')].join('')
+    : [K(['W', 'A', 'S', 'D'], '歩く・マウスで見回す'), K(['ドラッグ'], '見回す'), K(['Space'], 'ジャンプ'), K(['クリック'], '開く')].join('');
 };
 setKeys();
 document.addEventListener('pointerlockchange', setKeys);
@@ -230,7 +242,7 @@ document.addEventListener('keydown', (e) => {
   if ((e.target as Element).closest?.('a,button,input,textarea')) return;
   if (MOVE.has(e.code) && !locked() && !mobile) canvas.requestPointerLock?.()?.catch?.(() => {});
   keys.add(e.code);
-  if (e.code === 'KeyF') player.fly = !player.fly;
+  if (e.code === 'KeyN') toggleNight();
   if (e.code === 'Enter' || e.code === 'KeyE') activate(aimed());
   if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
 });
@@ -275,6 +287,15 @@ canvas.addEventListener('pointerup', endTouch);
 canvas.addEventListener('pointercancel', endTouch);
 $('jump').addEventListener('pointerdown', () => (jumpHeld = true));
 $('jump').addEventListener('pointerup', () => (jumpHeld = false));
+
+// ---------------------------------------------------------------- night vision
+let night = false;
+const nvButton = $('nv');
+function toggleNight(): void {
+  night = !night;
+  nvButton.setAttribute('aria-pressed', String(night));
+}
+nvButton.addEventListener('click', () => { toggleNight(); canvas.focus({ preventScroll: true }); });
 
 // ---------------------------------------------------------------- compass
 const DIRS = ['北', '北東', '東', '南東', '南', '南西', '西', '北西'];
@@ -360,7 +381,7 @@ async function start(): Promise<void> {
       const k = (c: string) => (keys.has(c) ? 1 : 0);
       const mx = k('KeyD') + k('ArrowRight') - k('KeyA') - k('ArrowLeft') + joy.x;
       const mz = k('KeyW') + k('ArrowUp') - k('KeyS') - k('ArrowDown') + joy.y;
-      player.step(dt, [Math.max(-1, Math.min(1, mx)), Math.max(-1, Math.min(1, mz))], keys.has('Space') || jumpHeld, keys.has('ShiftLeft') && player.fly || keys.has('KeyC'), keys.has('ShiftLeft') || keys.has('ShiftRight'));
+      player.step(dt, [Math.max(-1, Math.min(1, mx)), Math.max(-1, Math.min(1, mz))], keys.has('Space') || jumpHeld, false, keys.has('ShiftLeft') || keys.has('ShiftRight'));
       const a = aimed();
       tip.textContent = a ? a.label : '';
       compass(player.yaw);
@@ -376,7 +397,7 @@ async function start(): Promise<void> {
     u.set([...s.sun, s.day], 36);
     u.set([...s.zenith, fog], 40);
     u.set([...s.horizon, 1], 44);
-    u.set([0.2 + 0.4 * s.day, 1 - s.day, 0, 0], 48);
+    u.set([0.2 + 0.4 * s.day, 1 - s.day, night ? 1 : 0, 0], 48);
     u.set([...s.moon, 0], 52);
     const f = forward(player.yaw, 0);
     r.render(u, (cx, cz) => {

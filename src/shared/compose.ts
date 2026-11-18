@@ -21,9 +21,9 @@ function card(it: Item): string {
     + `${it.stat ? `<!--@stats:${it.stat}-->` : ''}${tags}</a></li>`;
 }
 
-/** Without a date a work is still going on: it belongs to this year, before the rest. */
+/** Without a date a work is still going on: it belongs to this year, after the rest. */
 export const yearOf = (it: Item) => (it.date ?? '').slice(0, 4) || String(new Date().getFullYear());
-export const sortKey = (it: Item) => it.date ?? '9999';
+export const sortKey = (it: Item) => it.date ?? `${new Date().getFullYear()}-00`;
 
 /** The 2D view: a column per year, newest first; works, posts and badges in each. */
 export function years(site: SiteBundle): string {

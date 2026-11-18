@@ -4,7 +4,7 @@
 
 **Web・モバイル・バックエンド・クラウド・セキュリティ、ときどき量子アニーリング**
 
-東北大学 工学部 電気情報物理工学科 4 年 · [吉田研究室(微小工学研究室)](https://web.tohoku.ac.jp/yoshida-lab/) · [一般社団法人とんペディア](https://org.tompedia.jp/) 理事（開発担当） · [Team JISAKU](https://jisaku.dev)
+東北大学 工学部 電気情報物理工学科 4 年 · [吉田研究室(微小光学研究室)](https://web.tohoku.ac.jp/yoshida-lab/) · [一般社団法人とんペディア](https://org.tompedia.jp/) 理事（開発担当） · [Team JISAKU](https://jisaku.dev)
 
 [![oriom.dev](https://img.shields.io/badge/oriom.dev-portfolio-000?style=flat-square)](https://oriom.dev)
 [![Bluesky](https://img.shields.io/badge/Bluesky-@oriom.dev-0285FF?style=flat-square&logo=bluesky&logoColor=white)](https://bsky.app/profile/oriom.dev)

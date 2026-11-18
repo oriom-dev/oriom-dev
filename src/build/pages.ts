@@ -17,7 +17,8 @@ export function buildPages(works: Work[], posts: Post[], comments: Comments = {}
     const p = d.name === 'index' ? '/' : `/${d.name}`;
     const meta = { path: p, title: String(d.meta.title), description: String(d.meta.description ?? '') };
     const pg = page(meta, expand(d.body, ctx, 'md'), expand(d.body, ctx, 'html'));
-    if (p === '/') pg.intro = mdToHtml(expand(d.body.replace(/^\{\{(works|posts|badges)\}\}$/gm, ''), ctx, 'html'));
+    // the top page without its lists and its title (the header already shows the name)
+    if (p === '/') pg.intro = mdToHtml(expand(d.body.replace(/^\{\{(works|posts|badges)\}\}$/gm, '').replace(/^# .*$/m, ''), ctx, 'html'));
     add(pg);
   }
   for (const w of works) {

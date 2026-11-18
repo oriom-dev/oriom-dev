@@ -47,3 +47,10 @@ html.popped body{overflow:hidden}
 .pop .works dl.stats{grid-column:2;margin:0;display:block;font-size:.9em}.pop dl.stats div{flex-direction:row;gap:.4rem;align-items:baseline}.pop dl.stats dt{color:var(--muted)}
 .pop ul.works figure.art svg{max-height:4rem;width:auto;max-width:100%}.pop ul.works figure.art{display:flex;justify-content:center}.pop dl.stats dd{font-size:1em}
 .pop figure.hero.badge{max-width:9rem;margin-inline:0}
+.pop .cluster section{margin:0 0 2rem}.pop .cluster h3{font-weight:300;font-size:1.05rem;margin:0 0 .5rem}
+.pop .cluster dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(9rem,1fr));gap:.4rem 1rem;margin:0 0 1rem}
+.pop .cluster dl div{display:flex;flex-direction:column}.pop .cluster dt{color:var(--muted);font-size:.8em}.pop .cluster dd{margin:0}
+.pop .ctr{list-style:none;padding:0;margin:0;display:grid;gap:.3rem;font-size:.85em}
+.pop .ctr li{display:grid;grid-template-columns:minmax(6rem,1fr) 4rem 4rem auto;align-items:center;gap:.6rem;margin:0}
+.pop .ctr i{display:block;height:.45rem;border-radius:2px;background:linear-gradient(90deg,var(--line) var(--v),color-mix(in oklch,var(--line) 18%,transparent) var(--v))}
+.pop .ctr small{color:var(--muted);white-space:nowrap}

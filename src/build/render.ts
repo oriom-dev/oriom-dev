@@ -73,7 +73,6 @@ export function badgeMarkdown(b: Badge, target: Target = 'md'): string {
 }
 
 const LINKS = [
-  ['クラスタ', '/stats', 'いまの状態'],
   ['GitHub', 'https://github.com/oriom-dev', '@oriom-dev'],
   ['Bluesky', 'https://bsky.app/profile/oriom.dev', '@oriom.dev'],
   ['Team JISAKU', 'https://jisaku.dev', 'jisaku.dev'],

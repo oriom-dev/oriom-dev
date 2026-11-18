@@ -9,7 +9,7 @@ import { mdPath } from '../shared/routes.ts';
 import { ROOT, loadPosts, loadWorks } from './content.ts';
 import { strokeIcon } from './png.ts';
 import { ORIGIN, PUBLICATION_URI } from './render.ts';
-import { bundleJs } from './templates.ts';
+import { bundleJs, M_PATH } from './templates.ts';
 import { buildPages } from './pages.ts';
 import { template } from './templates.ts';
 
@@ -39,17 +39,11 @@ const hex = (rgb: number[]) => `#${rgb.map((v) => v.toString(16).padStart(2, '0'
 /** Everything besides the bundle: service worker, manifest, icons, crawler files. */
 function writeExtras(out: string, site: SiteBundle): void {
   writeFileSync(path.join(out, 'sw.js'), bundleJs(path.join(ROOT, 'src/client/sw.ts')));
-  const bg = srgb(0.19, 0.03), fg = srgb(0.74, 0.12);
-  // the 1D favicon's arch, kept inside the maskable safe zone
-  const arch: [number, number][] = [];
-  for (let t = 0; t <= 1.0001; t += 1 / 64) {
-    const u = 1 - t;
-    const x = u ** 3 * 4 + 3 * u * u * t * 10 + 3 * u * t * t * 22 + t ** 3 * 28;
-    const y = u ** 3 * 24 + 3 * u * u * t * 4 + 3 * u * t * t * 4 + t ** 3 * 24;
-    arch.push([0.2 + (x / 32) * 0.6, 0.22 + (y / 32) * 0.6]);
-  }
-  for (const n of [192, 512]) writeFileSync(path.join(out, `icon-${n}.png`), strokeIcon(n, arch, 0.06, fg, bg));
-  writeFileSync(path.join(out, 'icon.svg'), `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" fill="${hex(bg)}"/><path d="M10.4 26.2C11.6 22.4 14 10.2 16 10.2S20.4 22.4 21.6 26.2" fill="none" stroke="${hex(fg)}" stroke-width="2" stroke-linecap="round"/></svg>`);
+  const bg = srgb(0.27, 0.04), fg = srgb(0.86, 0.12);
+  // the favicon's "M", kept inside the maskable safe zone (the middle 60 %)
+  const m: [number, number][] = [[9.5, 23], [9.5, 9.5], [16, 17.5], [22.5, 9.5], [22.5, 23]].map(([x, y]) => [0.2 + ((x! - 2) / 28) * 0.6, 0.2 + ((y! - 2) / 28) * 0.6]);
+  for (const n of [192, 512]) writeFileSync(path.join(out, `icon-${n}.png`), strokeIcon(n, m, 0.07, fg, bg));
+  writeFileSync(path.join(out, 'icon.svg'), `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="6" fill="${hex(bg)}"/><path d="${M_PATH}" fill="none" stroke="${hex(fg)}" stroke-width="3.4" stroke-linecap="square"/></svg>`);
   writeFileSync(path.join(out, 'manifest.webmanifest'), JSON.stringify({
     name: 'oriom.dev', short_name: 'oriom', lang: 'ja', start_url: '/', scope: '/', id: '/',
     display: 'standalone', background_color: hex(bg), theme_color: hex(bg),

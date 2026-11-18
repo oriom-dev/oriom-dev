@@ -10,8 +10,10 @@ export function readStats(): Stats | null {
 
 export function renderStats(s: Stats | null): void {
   if (!s) return;
-  for (const dl of document.querySelectorAll<HTMLElement>('dl[data-stats]')) {
+  for (const dl of document.querySelectorAll<HTMLElement>('[data-stats]')) {
     const next = document.createRange().createContextualFragment(statsHtml(s, dl.dataset.stats!)).firstElementChild!;
+    // bars and blocks are redrawn whole; single numbers are updated in place
+    if (dl.dataset.stats === 'meters' || dl.dataset.stats === 'full') { if (dl.outerHTML !== next.outerHTML) dl.replaceWith(next); continue; }
     // Update values in place so screen readers are not handed a new subtree each poll.
     for (const dd of next.querySelectorAll<HTMLElement>('dd[data-k]')) {
       const cur = dl.querySelector<HTMLElement>(`dd[data-k="${CSS.escape(dd.dataset.k!)}"]`);
@@ -26,7 +28,7 @@ export function renderStats(s: Stats | null): void {
 function pollStats(): void {
   const tick = async () => {
     if (document.hidden || !document.querySelector('[data-stats]') && document.documentElement.dataset.v !== '3d') return;
-    const full = !!document.querySelector('.pop:not([hidden]) dl[data-stats="full"]');
+    const full = !!document.querySelector('.pop:not([hidden]) [data-stats="full"]');
     try {
       const r = await fetch(full ? '/api/stats?full' : '/api/stats', { cache: 'no-store' });
       if (r.ok) renderStats(await r.json());

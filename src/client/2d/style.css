@@ -4,7 +4,7 @@
 body{font-weight:300;background-image:radial-gradient(circle,var(--grid) 1px,transparent 1.6px);background-size:28px 28px;background-attachment:fixed}
 .bar{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;align-items:baseline;gap:.25rem 1.25rem;padding:.6rem var(--side);background:color-mix(in oklch,var(--bg) 88%,transparent);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-bottom:1px solid var(--grid)}
 .bar nav{display:flex;gap:1rem;flex-wrap:wrap}.bar a{text-decoration:none}
-.bar{justify-content:flex-end}.bar dl.stats{margin:0;display:block}.bar dl.stats div{flex-direction:row;gap:.4rem;align-items:baseline}.bar dl.stats dd{font-size:1em}
+.bar dl.stats:not(.meters){margin:0;display:block}.bar dl.stats:not(.meters) div{flex-direction:row;gap:.4rem;align-items:baseline}.bar dl.stats:not(.meters) dd{font-size:1em}
 .cards{padding:2.5rem 0 4rem}
 .cards>h1,.cards>ul,.cards>.end{margin-left:var(--side);margin-right:var(--side)}
 .cards>h1{font-weight:200;font-size:clamp(1.8rem,7vw,2.6rem);letter-spacing:.04em;margin-top:0;margin-bottom:1rem}
@@ -26,4 +26,4 @@ body{font-weight:300;background-image:radial-gradient(circle,var(--grid) 1px,tra
 .year .tags{list-style:none;padding:0;margin:.35rem 0 0;display:flex;flex-wrap:wrap;gap:.3rem}
 .year .tags li{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:.72em;padding:.05rem .4rem;border:1px solid var(--grid);border-radius:4px;color:var(--muted)}
 .end{padding-top:1rem;border-top:1px solid var(--grid);color:var(--muted);font-size:.85em;display:flex;gap:1rem}
-body .cards>h1+ul{margin:0 var(--side) 1rem}
+body .cards>ul:first-child{list-style:none;padding:0;display:flex;flex-wrap:wrap;gap:.4rem .5rem;margin:0 var(--side) 1rem}body .cards>ul:first-child li{margin:0;padding:.15rem .7rem;border:1px solid var(--line);border-radius:999px;font-size:.9em}

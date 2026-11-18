@@ -24,10 +24,12 @@ function paletteCss(): string {
   return `:root{${decl('light')}}@media (prefers-color-scheme:dark){:root{${decl('dark')}}}`;
 }
 
-// Favicon: one Bézier stroke in the page's hue, inline so it costs no request.
-const icon = (variant: Variant) => {
-  const d = { '2d': 'M5 5h22v22H5z', '3d': 'M16 3 28 10v12L16 29 4 22V10z' }[variant];
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path d="${d}" fill="none" stroke="oklch(0.6 0.12 __HUE__)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+// Favicon: a monospace "M" on a rounded square (after lemur.dev's), in the page's hue,
+// drawn as a stroke so it looks the same without any font; inline so it costs no request.
+export const M_PATH = 'M9.5 23V9.5l6.5 8 6.5-8V23';
+const icon = (_variant: Variant) => {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="6" fill="oklch(0.27 0.04 __HUE__)"/>`
+    + `<path d="${M_PATH}" fill="none" stroke="oklch(0.86 0.12 __HUE__)" stroke-width="3.4" stroke-linecap="square" stroke-linejoin="miter"/></svg>`;
   return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 };
 
