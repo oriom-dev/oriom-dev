@@ -60,19 +60,20 @@ const badgeLine = (b: Badge) => `- [${mdText(b.name)}](/badges/${b.slug})：${b.
 export function badgeMarkdown(b: Badge, target: Target = 'md'): string {
   const criteria = b.criteria.replace(/\s*\n\s*/g, ' ');
   if (target === 'md') {
-    return [`# ${b.name}`, `${b.issuer.name} · ${ymd(b.issuedOn)}`, b.description, criteria && `> ${criteria}`, `[${b.issuer.name} のページ](${b.share})`].filter(Boolean).join('\n\n');
+    return [`# ${b.name}`, `[${b.issuer.name} のページ](${b.share})`, `${b.issuer.name} · ${ymd(b.issuedOn)}`, b.description, criteria && `> ${criteria}`].filter(Boolean).join('\n\n');
   }
   return [
     `# ${b.name}`,
     b.art ? figure(b.art, b.art.title ?? b.name, 'hero badge') : '',
+    `<ul class="links"><li><a href="${esc(b.share)}">${esc(b.issuer.name)} のページ</a></li></ul>`,
     `<ul class="facts"><li>${esc(b.issuer.name)}</li><li><time datetime="${ymd(b.issuedOn)}">${ymd(b.issuedOn)}</time></li></ul>`,
     b.description.split(/\n{2,}/).map((p) => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`).join(''),
     criteria ? `<blockquote><p>${esc(criteria)}</p></blockquote>` : '',
-    `<ul class="links"><li><a href="${esc(b.share)}">${esc(b.issuer.name)} のページ</a></li></ul>`,
   ].filter(Boolean).join('\n\n');
 }
 
 const LINKS = [
+  ['クラスタ', '/stats', 'いまの状態'],
   ['GitHub', 'https://github.com/oriom-dev', '@oriom-dev'],
   ['Bluesky', 'https://bsky.app/profile/oriom.dev', '@oriom.dev'],
   ['Team JISAKU', 'https://jisaku.dev', 'jisaku.dev'],
@@ -109,29 +110,28 @@ export function expand(md: string, ctx: Ctx, target: Target = 'md'): string {
 
 /** A work: the facts as a short line and tags, laid out instead of labelled. */
 export function workMarkdown(w: Work, target: Target = 'md'): string {
-  const when = w.date ? (w.date.length === 4 ? `${w.date} 年度` : w.date) : '';
+  const when = w.date ? (w.date.length === 4 ? `${w.date} 年度` : w.date) : '進行中';
   const facts = [when, kindLabel(w.kind), w.team ?? ''].filter(Boolean);
   const stat = w.stat ? `<!--@stats:${w.stat}-->` : '';
   if (target === 'md') {
     return [
-      `# ${w.title}`, w.summary, `${facts.join(' · ')}${stat ? ` · ${stat}` : ''}`,
+      `# ${w.title}`, w.links.map((l) => `[${l.label}](${l.url})`).join(' · '), w.summary, `${facts.join(' · ')}${stat ? ` · ${stat}` : ''}`,
       w.role.length ? `担当：${w.role.join('、')}` : '', w.tech.length ? `技術：${w.tech.join('、')}` : '',
       w.body,
       w.awards.map((a) => `- 🏆 ${a.date} ${a.name}`).join('\n'),
-      w.links.map((l) => `- [${l.label}](${l.url})`).join('\n'),
     ].filter(Boolean).join('\n\n');
   }
   const li = (xs: string[]) => xs.map((x) => `<li>${esc(x)}</li>`).join('');
   return [
     `# ${w.title}`,
     w.art ? figure(w.art, w.art.title ?? w.title, 'hero') : '',
+    w.links.length ? `<ul class="links">${w.links.map((l) => `<li><a href="${esc(l.url)}">${esc(l.label)}</a></li>`).join('')}</ul>` : '',
     `<p class="lead">${esc(w.summary)}</p>`,
     `<ul class="facts">${li(facts)}${stat ? `<li>${stat}</li>` : ''}</ul>`
       + (w.role.length ? `<ul class="roles">${li(w.role)}</ul>` : '')
       + (w.tech.length ? `<ul class="tags">${li(w.tech)}</ul>` : ''),
     w.body,
     w.awards.length ? `<ul class="awards">${w.awards.map((a) => `<li><time datetime="${a.date}">${a.date}</time>${esc(a.name)}</li>`).join('')}</ul>` : '',
-    w.links.length ? `<ul class="links">${w.links.map((l) => `<li><a href="${esc(l.url)}">${esc(l.label)}</a></li>`).join('')}</ul>` : '',
   ].filter(Boolean).join('\n\n');
 }
 

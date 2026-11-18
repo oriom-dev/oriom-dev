@@ -4,7 +4,7 @@
 
 **Web・モバイル・バックエンド・クラウド・セキュリティ、ときどき量子アニーリング**
 
-東北大学 工学部 電気情報物理工学科 4 年 · 微小光学研究室 · [一般社団法人とんペディア](https://org.tompedia.jp/) 理事（開発担当） · [Team JISAKU](https://jisaku.dev)
+東北大学 工学部 電気情報物理工学科 4 年 · [吉田研究室(微小工学研究室)](https://web.tohoku.ac.jp/yoshida-lab/) · [一般社団法人とんペディア](https://org.tompedia.jp/) 理事（開発担当） · [Team JISAKU](https://jisaku.dev)
 
 [![oriom.dev](https://img.shields.io/badge/oriom.dev-portfolio-000?style=flat-square)](https://oriom.dev)
 [![Bluesky](https://img.shields.io/badge/Bluesky-@oriom.dev-0285FF?style=flat-square&logo=bluesky&logoColor=white)](https://bsky.app/profile/oriom.dev)
@@ -12,7 +12,7 @@
 
 </div>
 
-研究では 3D Gaussian Splatting を、課外では量子アニーリングを触っています。作るものに合わせて、フロントエンドから組込、インフラまでどこからでも手を動かします。
+課外では量子アニーリングを触っています。作るものに合わせて、フロントエンドから組込、インフラまでどこからでも手を動かします。
 
 > [!TIP]
 > 実績や記事は [oriom.dev](https://oriom.dev) にもまとめています。
@@ -79,7 +79,6 @@ timeline
 <details>
 <summary><b>🧪 研究・興味</b></summary>
 
-- 3D Gaussian Splatting（微小光学研究室）
 - 量子アニーリング・シミュレーテッドアニーリングによる組合せ最適化（コンテナ配置、マッチング、班分け）
 - 災害時の端末間通信（store / carry / forward、AT Protocol と Nostr）
 - 自宅と VPS をつないだ Podman クラスタの運用

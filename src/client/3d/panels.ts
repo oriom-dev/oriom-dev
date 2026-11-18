@@ -10,9 +10,8 @@ const css = (name: string) => getComputedStyle(document.documentElement).getProp
 const FONT = 'system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif';
 
 /** A vertical quad centred at c, facing `normal` (horizontal), w by h. */
-export function quadAt(c: number[], normal: number[], w: number, h: number): Float32Array {
+export function quadAt(c: number[], normal: number[], w: number, h: number, o = 0.08): Float32Array {
   const r = [normal[2]!, 0, -normal[0]!]; // right vector when looking at the sign
-  const o = 0.08;
   const P = (sx: number, sy: number) => [c[0]! + r[0]! * sx * w / 2 + normal[0]! * o, c[1]! + sy * h / 2, c[2]! + r[2]! * sx * w / 2 + normal[2]! * o];
   const v = [[-1, -1, 0, 1], [1, -1, 1, 1], [1, 1, 1, 0], [-1, 1, 0, 0]];
   return new Float32Array(v.flatMap(([sx, sy, u, t]) => [...P(sx!, sy!), u!, t!]));
@@ -48,23 +47,22 @@ function frame(ctx: CanvasRenderingContext2D, W: number, H: number): void {
   ctx.strokeRect(10, 10, W - 20, H - 20);
 }
 
-const NOTES = {
-  desktop: ['WASD・矢印キーで歩く／ドラッグで見回す', 'Space でジャンプ／F で飛ぶ', '看板をクリックで開く'],
-  touch: ['左下をドラッグして歩く／右側で見回す', '▲ でジャンプ', '看板をタップで開く'],
-};
-
-/** The title card: what is in view first. A real element, so HTML-in-Canvas can paint it. */
-export function titleCard(title: string, touch: boolean): HTMLElement {
+/** The title card: the name and where its owner belongs. A real element, so
+ *  HTML-in-Canvas can paint it. */
+export function titleCard(title: string, lines: string[]): HTMLElement {
   const el = document.createElement('div');
   el.className = 'title-card';
   const h = document.createElement('p');
   h.className = 't';
   h.textContent = title;
   const ul = document.createElement('ul');
-  for (const n of NOTES[touch ? 'touch' : 'desktop']) ul.append(Object.assign(document.createElement('li'), { textContent: n }));
+  for (const n of lines) ul.append(Object.assign(document.createElement('li'), { textContent: n }));
   el.append(h, ul);
   return el;
 }
+
+/** When: the date, the school year, or "進行中" for work without an end. */
+export const when = (it: Item) => (it.date ? (it.date.length === 4 ? `${it.date} 年度` : it.date) : '進行中');
 
 /** The same card drawn by hand, for browsers without HTML-in-Canvas. `corner` is a
  *  number in the bottom right (the visit counter). */
@@ -80,10 +78,10 @@ export function cardCanvas(card: HTMLElement, corner = ''): HTMLCanvasElement {
   ctx.strokeStyle = css('--line') || '#888';
   ctx.lineWidth = 3;
   ctx.beginPath(); ctx.moveTo(72, y + 24); ctx.lineTo(W - 72, y + 24); ctx.stroke();
-  ctx.fillStyle = css('--muted') || '#666';
-  ctx.font = `300 32px ${FONT}`;
-  let ly = y + 64;
-  for (const li of card.querySelectorAll('li')) { ctx.fillText(li.textContent ?? '', 72, ly, W - 144); ly += 52; }
+  ctx.fillStyle = css('--fg') || '#000';
+  ctx.font = `300 34px ${FONT}`;
+  let ly = y + 60;
+  for (const li of card.querySelectorAll('li')) { ctx.fillText(`・${li.textContent ?? ''}`, 72, ly, W - 144); ly += 54; }
   if (corner) {
     ctx.textAlign = 'right';
     ctx.font = `200 40px ${FONT}`;
@@ -92,12 +90,19 @@ export function cardCanvas(card: HTMLElement, corner = ''): HTMLCanvasElement {
   return cv;
 }
 
-/** A work's sign: its line drawing, title and summary, and its live number if it has one. */
+/** A work's or a badge's sign: when, its line drawing, title and summary, and its
+ *  live number if it has one. */
 export function workCanvas(it: Item, stat = ''): HTMLCanvasElement {
   const W = 512, H = 384;
   const cv = Object.assign(document.createElement('canvas'), { width: W, height: H });
   const ctx = cv.getContext('2d')!;
   frame(ctx, W, H);
+  ctx.fillStyle = css('--muted') || '#666';
+  ctx.font = `400 20px ${FONT}`;
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'top';
+  ctx.fillText(when(it), W - 30, 26);
+  ctx.textAlign = 'left';
   if (it.art) {
     const art = parseArtAttr(it.art);
     const boxH = 170, s = Math.min((W - 120) / 1000, boxH / (1000 / art.aspect));
@@ -133,13 +138,27 @@ export function postCanvas(it: Item): HTMLCanvasElement {
   ctx.textBaseline = 'top';
   ctx.fillStyle = css('--muted') || '#666';
   ctx.font = `400 22px ${FONT}`;
-  ctx.fillText(`${it.date ?? ''}${it.by ? `・${it.by}` : ''}`, 32, 36, W - 64);
+  ctx.fillText(`${when(it)}${it.by ? `・${it.by}` : ''}`, 32, 36, W - 64);
   ctx.fillStyle = css('--fg') || '#000';
   ctx.font = `400 36px ${FONT}`;
   const y = wrap(ctx, it.title, 32, 76, W - 64, 46, 200);
   ctx.font = `300 21px ${FONT}`;
   ctx.fillStyle = css('--muted') || '#666';
   wrap(ctx, it.summary, 32, y + 4, W - 64, 30, 330);
+  return cv;
+}
+
+/** A small plaque on a post: the year where a stretch of signs begins. */
+export function plaqueCanvas(text: string): HTMLCanvasElement {
+  const W = 256, H = 128;
+  const cv = Object.assign(document.createElement('canvas'), { width: W, height: H });
+  const ctx = cv.getContext('2d')!;
+  frame(ctx, W, H);
+  ctx.fillStyle = css('--fg') || '#000';
+  ctx.font = `300 64px ${FONT}`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, W / 2, H / 2 + 4);
   return cv;
 }
 

@@ -10,7 +10,7 @@ export interface Renderer {
   render(uniforms: Float32Array, visible: (cx: number, cz: number) => boolean): void;
 }
 
-export const UNIFORM_FLOATS = 60; // 2 mat4 + 7 vec4
+export const UNIFORM_FLOATS = 64; // 2 mat4 + 8 vec4
 export const MAX_QUADS = 1 << 16;
 
 export function quadIndices(): Uint32Array<ArrayBuffer> {

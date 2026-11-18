@@ -5,26 +5,34 @@
     "threshold": 80,
     "size": 400,
     "min_len": 0.03,
-    "frame": 0.22
+    "frame": 0.22,
+    "err": 6,
+    "sigma": 1.5
   },
   "lens": {
     "src": "lens.png",
     "title": "LENS のフクロウ",
     "threshold": 60,
     "size": 400,
-    "min_len": 0.03
+    "min_len": 0.03,
+    "err": 3.5,
+    "sigma": 0.8
   },
   "linkm": {
     "src": "linkm.png",
     "title": "リンクエムの LM",
     "threshold": 90,
-    "size": 400
+    "size": 400,
+    "err": 6,
+    "sigma": 1.5
   },
   "erb": {
     "src": "erb.svg",
     "title": "ドイツ相続法情報室の「ド」",
     "threshold": 80,
-    "size": 400
+    "size": 400,
+    "err": 6,
+    "sigma": 1.5
   },
   "ifg-pathleader": {
     "src": "ifg-pathleader.png",
@@ -35,13 +43,14 @@
     "min_len": 0.03,
     "drop_frame": true,
     "close": 0,
-    "frame": 0.12
+    "frame": 0.12,
+    "err": 6,
+    "sigma": 1.5
   },
   "kytos": {
     "mode": "proc",
-    "fn": "anneal",
-    "title": "エネルギー地形のいちばん深い谷に落ち着く玉",
-    "keep_order": true
+    "fn": "ship",
+    "title": "コンテナを積み上げた貨物船"
   },
   "q-sherpa": {
     "mode": "proc",

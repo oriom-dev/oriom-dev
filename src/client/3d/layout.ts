@@ -20,13 +20,11 @@ export function ringLayout(n: number): { slots: Slot[]; plaza: number } {
     const cap = Math.max(1, Math.floor((r * arc) / SPACING));
     const count = Math.min(cap, n - slots.length);
     // every seat of the arc, evenly spaced (odd arcs shifted by half a step so they
-    // show between the signs of the arc inside), then the seats nearest the title sign
-    // first: the newest signs stand beside it, at the edges of the first view
+    // show between the signs of the arc inside), taken in order from the left of the
+    // title sign round the back to its right: newest first, so each year is one stretch
     const step = arc / cap;
     const shift = ring % 2 ? step / 2 : 0;
-    const seats = Array.from({ length: cap }, (_, j) => FRONT_GAP + (j + 0.5) * step + shift);
-    seats.sort((a, b) => Math.abs(b - Math.PI) - Math.abs(a - Math.PI));
-    const angles = seats.slice(0, count);
+    const angles = Array.from({ length: count }, (_, j) => FRONT_GAP + (j + 0.5) * step + shift);
     for (const ang of angles) {
       slots.push({ x: -Math.sin(ang) * r, z: -Math.cos(ang) * r, y: 0, nx: Math.sin(ang), nz: Math.cos(ang), ring });
     }

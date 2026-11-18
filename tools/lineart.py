@@ -4,13 +4,9 @@
   nix develop -c python3 tools/lineart.py            # all entries of tools/lineart.json
   nix develop -c python3 tools/lineart.py tompedia   # one entry
 
-Output: content/art/<slug>.json =
-  {"aspect": w/h, "s": [[x0, y0, dx, dy, ...], ...], "c": [1, 0, ...], "title": ...}
-Each stroke is a list of evenly spaced points on a 0..1000 grid (scaled to the box
-width), delta-encoded; "c" marks closed strokes. Clients draw a smooth Catmull-Rom
-curve through each stroke. The strokes are stored in drawing order and direction, so
-the 1D page can join them into one line with tangent-continuous connectors; the 2D
-and 3D pages simply draw them one by one.
+Output: content/art/<slug>.json = {"aspect": w/h, "d": "<SVG path>", "r": [[x, y, w, h, radius]], "title": ...}
+on a 0..1000 grid across the box width: outlines fitted with cubic Bézier curves
+(straight pieces as lines), rounded rectangles and circles as exact shapes.
 Sources live in .cache/art-src (not committed); only the derived strokes are.
 """
 import io, json, math, sys
@@ -18,6 +14,9 @@ from pathlib import Path
 
 import cv2
 import numpy as np
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from bezierfit import fit_stroke, is_line  # noqa: E402
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -95,37 +94,24 @@ def logo_strokes(img, cfg):
         for c, (x, y, bw, bh) in zip(cs, boxes):
             if bw * bh >= 0.6 * big:
                 r = min(bw, bh) * cfg['frame']
-                out.append(rounded_rect(x, y, bw, bh, r, 3))
+                out.append(rounded_rect(x, y, bw, bh, r))
             else:
                 keep.append(c)
         cs = keep
     for c in cs:
         sm = smooth_closed(c, cfg.get('sigma', 0.9), 1.0)
-        poly = cv2.approxPolyDP(sm.astype(np.float32).reshape(-1, 1, 2), cfg.get('eps', 0.006) * size, True)[:, 0, :]
-        if len(poly) >= 3:
-            out.append((poly.astype(float), True))
+        if len(sm) >= 4:
+            out.append((sm, True))  # dense: encode() fits Bézier curves to it
     return out
 
 
-def rounded_rect(x, y, w, h, r, n=4):
-    """Corner arcs of n points, with two points on every straight side so the curve
-    leaves each corner along the side instead of overshooting it."""
-    pts = []
-    corners = ((x + w - r, y + r, -90), (x + w - r, y + h - r, 0), (x + r, y + h - r, 90), (x + r, y + r, 180))
-    for k, (cx, cy, a0) in enumerate(corners):
-        arc = [(cx + r * math.cos(math.radians(a0 + 90 * i / (n - 1))), cy + r * math.sin(math.radians(a0 + 90 * i / (n - 1)))) for i in range(n)]
-        pts += arc
-        nx, ny, na = corners[(k + 1) % 4]
-        nxt = (nx + r * math.cos(math.radians(na)), ny + r * math.sin(math.radians(na)))
-        end = arc[-1]
-        for t in (0.2, 0.8):
-            pts.append((end[0] + (nxt[0] - end[0]) * t, end[1] + (nxt[1] - end[1]) * t))
-    return np.array(pts), True
+def rounded_rect(x, y, w, h, r, n=None):
+    """An exact shape, not points: drawn as 4 lines and 4 arcs by the client."""
+    return 'rect', np.array([x, y, w, h, min(r, w / 2, h / 2)], float)
 
 
-def circle(cx, cy, r, n=20):
-    a = np.linspace(0, 2 * np.pi, n, endpoint=False)
-    return np.c_[cx + r * np.cos(a), cy + r * np.sin(a)], True
+def circle(cx, cy, r, n=None):
+    return 'rect', np.array([cx - r, cy - r, 2 * r, 2 * r, r], float)
 
 
 def bezier(a, c1, c2, b, n=24):
@@ -136,6 +122,20 @@ def bezier(a, c1, c2, b, n=24):
 
 def procedural(fn):
     """Simple figures for works that only have screenshots: few strokes, no corners."""
+    if fn == 'ship':  # Kytos: a container ship, stacked high
+        hull = np.vstack([bezier((10, 150), (60, 150), (330, 150), (395, 128), 12)[0], bezier((395, 128), (380, 160), (370, 182), (350, 186), 8)[0][1:],
+                          [[60, 186]], bezier((60, 186), (40, 186), (22, 172), (10, 150), 8)[0][1:]])
+        out = [(hull, False)]
+        out.append(rounded_rect(28, 70, 34, 72, 3))  # bridge
+        out.append(rounded_rect(36, 56, 18, 14, 2))
+        for col in range(9):
+            x = 72 + col * 32
+            top = 3 if 1 <= col <= 7 else 2
+            for tier in range(top):
+                out.append(rounded_rect(x, 124 - (tier + 1) * 20, 30, 18, 2))
+        wave = np.c_[np.linspace(0, 405, 40), 200 + 4 * np.sin(np.linspace(0, 405, 40) / 14)]
+        out.append((wave, False))
+        return out
     if fn == 'anneal':  # Kytos: an energy landscape and a ball settling in the deepest valley
         x = np.linspace(0, 400, 90)
         y = 150 - 62 * np.exp(-((x - 270) / 48) ** 2) - 26 * np.exp(-((x - 110) / 32) ** 2) + 7 * np.sin(x / 22)
@@ -241,25 +241,45 @@ def order(strokes, drift=0.7):
     return path
 
 
-def encode(strokes, cfg):
-    pts = np.vstack([s for s, _ in strokes])
+def encode(strokes, rects, cfg):
+    """Scale to the 0..1000 grid and fit Bézier curves: an SVG path (M/L/C/Z, integer
+    coordinates) plus exact rounded rectangles."""
+    pts = [s for s, _ in strokes] + [np.array([[x, y], [x + w, y + h]]) for x, y, w, h, _ in rects]
+    pts = np.vstack(pts)
     x0, y0 = pts.min(axis=0)
     x1, y1 = pts.max(axis=0)
     bw, bh = max(x1 - x0, 1), max(y1 - y0, 1)
     pad = cfg.get('pad', 0.06)
     aspect = (bw * (1 + 2 * pad)) / (bh + bw * 2 * pad)
     scale = GRID * (1 - 2 * pad) / bw
-    out, closed = [], []
-    for s, c in strokes:
-        q = np.round((s - [x0, y0]) * scale + GRID * pad).astype(int)
-        keep = [0] + [i for i in range(1, len(q)) if (q[i] != q[i - 1]).any()]
-        q = q[keep]
-        flat = [int(q[0, 0]), int(q[0, 1])]
-        for a, b in zip(q[:-1], q[1:]):
-            flat += [int(b[0] - a[0]), int(b[1] - a[1])]
-        out.append(flat)
-        closed.append(1 if c else 0)
-    return {'aspect': round(float(aspect), 4), 's': out, 'c': closed}
+    err = cfg.get('err', 2.5)  # grid units (the box is 1000 wide)
+    # relative commands with integer offsets: short numbers, and the client only scales them
+    num = lambda v: (f'{v}' if v < 0 else f' {v}')
+    pair = lambda v: num(v[0]) + num(v[1])
+    d = []
+    for s, closed in strokes:
+        g = (s - [x0, y0]) * scale + GRID * pad
+        segs = fit_stroke(g, closed, err, cfg.get('corner', 55))
+        if not segs:
+            continue
+        cur = np.round(segs[0][0]).astype(int)
+        start = cur.copy()
+        d.append(f'M{cur[0]} {cur[1]}')
+        for c in segs:
+            q = np.round(c).astype(int)
+            if is_line(c, err * 0.6):
+                d.append('l' + pair(q[3] - cur).lstrip())
+            else:
+                d.append('c' + (pair(q[1] - cur) + pair(q[2] - cur) + pair(q[3] - cur)).lstrip())
+            cur = q[3]
+        if closed:
+            d.append('z')
+            cur = start
+    art = {'aspect': round(float(aspect), 4), 'd': ''.join(d)}
+    if rects:
+        art['r'] = [[int(round((x - x0) * scale + GRID * pad)), int(round((y - y0) * scale + GRID * pad)),
+                     int(round(w * scale)), int(round(h * scale)), int(round(r * scale))] for x, y, w, h, r in rects]
+    return art
 
 
 def main():
@@ -269,14 +289,14 @@ def main():
     for slug, cfg in cfgs.items():
         if only and slug not in only:
             continue
-        strokes = procedural(cfg['fn']) if cfg.get('mode') == 'proc' else logo_strokes(load(cfg), cfg)
-        strokes = [(np.asarray(s, float), c) for s, c in strokes]
-        art = encode(strokes if cfg.get('keep_order') else order(strokes), cfg)
+        raw = procedural(cfg['fn']) if cfg.get('mode') == 'proc' else logo_strokes(load(cfg), cfg)
+        rects = [c for s, c in raw if isinstance(s, str)]
+        strokes = [(np.asarray(s, float), c) for s, c in raw if not isinstance(s, str)]
+        art = encode(strokes if cfg.get('keep_order') or not strokes else order(strokes), rects, cfg)
         art['title'] = cfg.get('title', slug)
         text = json.dumps(art, separators=(',', ':'), ensure_ascii=False)
         (OUT / f'{slug}.json').write_text(text + '\n')
-        n = sum(len(s) // 2 for s in art['s'])
-        print(f'{slug}: {len(art["s"])} strokes, {n} points, {len(text) / 1024:.1f} KB')
+        print(f'{slug}: {art["d"].count("C")} curves, {art["d"].count("L")} lines, {len(art.get("r", []))} shapes, {len(text) / 1024:.2f} KB')
 
 
 if __name__ == '__main__':

@@ -8,11 +8,7 @@ html:not(.world) body{overflow:auto}
 html.world #view{display:block}
 .btn{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:.35rem 1rem;cursor:pointer}
 .btn:hover{background:color-mix(in oklch,var(--line) 18%,var(--bg))}
-.bar{position:fixed;inset:0 0 auto 0;z-index:3;display:flex;flex-wrap:wrap;align-items:center;gap:.4rem 1.1rem;padding:.6rem 1rem;background:color-mix(in oklch,var(--bg) 80%,transparent);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
-html:not(.world) .bar{position:static}
-.bar .name{letter-spacing:.2em;font-weight:400;text-decoration:none}.bar nav{display:flex;gap:1rem;flex-wrap:wrap}.bar a{text-decoration:none}
-.tolist{margin-left:auto}
-.html-canvas{position:fixed;left:-200vw;top:0}
+html:not(.world) .html-canvas{position:fixed;left:-200vw;top:0}
 .title-card{width:1024px;height:768px;padding:96px 72px;background:var(--bg);color:var(--fg);border:6px solid var(--line);font-family:system-ui,sans-serif}
 .title-card .t{font-size:76px;font-weight:200;line-height:1.2;margin:0 0 40px;padding-bottom:24px;border-bottom:3px solid var(--line)}
 .title-card ul{list-style:none;padding:0;margin:0;font-size:32px;color:var(--muted);line-height:1.6}
@@ -23,3 +19,12 @@ html.world:not(.popped) .tip:not(:empty){display:block;position:fixed;left:50%;t
 .joy{position:fixed;left:1.25rem;bottom:1.5rem;z-index:1;width:7.5rem;height:7.5rem;border:1px solid var(--line);border-radius:50%;background:color-mix(in oklch,var(--bg) 40%,transparent)}
 .joy i{position:absolute;left:50%;top:50%;width:2.75rem;height:2.75rem;margin:-1.375rem;border-radius:50%;background:color-mix(in oklch,var(--line) 60%,transparent)}
 .jump{position:fixed;right:1.25rem;bottom:2.5rem;z-index:1;width:3.5rem;height:3.5rem;padding:0}
+/* the status bar: which way you face, and what the keys do right now */
+.status{position:fixed;left:0;right:0;bottom:0;z-index:3;display:flex;align-items:center;gap:1rem;padding:.55rem 5rem .55rem 1rem;background:color-mix(in oklch,var(--bg) 82%,transparent);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-top:1px solid color-mix(in oklch,var(--line) 40%,transparent);font-size:.85em;color:var(--muted)}
+html:not(.world) .status{display:none}
+.compass{display:flex;align-items:center;gap:.4rem;color:var(--fg);min-width:4.5rem}
+.compass i{display:inline-block;font-style:normal;transition:transform .1s linear}
+.compass b{font-weight:400}
+.keys{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html.world .switch{bottom:.4rem}
+@media (pointer:coarse){.status{display:none}html.world:not(.popped) .touch{display:block}}

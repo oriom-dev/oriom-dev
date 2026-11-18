@@ -1,6 +1,6 @@
 // The same shading in WGSL (WebGPU) and GLSL ES 3.0 (WebGL 2). Uniform block layout
 // (floats): viewProj[16] invViewProj[16] cam[4: xyz, time] sun[4: dir, daylight]
-// zenith[4: rgb, fog density] horizon[4] light[4: ambient, lamp glow, -, -].
+// zenith[4: rgb, fog density] horizon[4] light[4: ambient, lamp glow, -, -] moon[4: dir, -].
 // Blocks: 0 air 1 grass 2 dirt 3 stone 4 sand 5 water 6 log 7 leaves 8 snow
 //         9 lamp off 10 lamp on 11 plank 12 gravel
 
@@ -15,7 +15,7 @@ const common = (lang: 'wgsl' | 'glsl') => {
 };
 
 export const WGSL = /* wgsl */ `
-struct U { vp: mat4x4f, ivp: mat4x4f, cam: vec4f, sun: vec4f, zenith: vec4f, horizon: vec4f, light: vec4f };
+struct U { vp: mat4x4f, ivp: mat4x4f, cam: vec4f, sun: vec4f, zenith: vec4f, horizon: vec4f, light: vec4f, moon: vec4f };
 @group(0) @binding(0) var<uniform> u: U;
 var<private> PAL: array<vec3f, 13> = array<vec3f, 13>(${common('wgsl')});
 fn hash3(p: vec3f) -> f32 { return fract(sin(dot(p, vec3f(12.9898, 78.233, 37.719))) * 43758.5453); }
@@ -61,11 +61,16 @@ struct SO { @builtin(position) pos: vec4f, @location(0) ndc: vec2f };
   let w = u.ivp * vec4f(i.ndc, 1.0, 1.0);
   let dir = normalize(w.xyz / w.w - u.cam.xyz);
   var c = mix(u.horizon.rgb, u.zenith.rgb, smoothstep(-0.02, 0.5, dir.y));
-  let s = max(dot(dir, u.sun.xyz), 0.0);
-  c += vec3f(1.0, 0.92, 0.75) * (pow(s, 900.0) * 4.0 + pow(s, 12.0) * 0.18 * u.sun.w);
-  let m = max(dot(dir, -u.sun.xyz), 0.0);
-  c += vec3f(0.85, 0.9, 1.0) * pow(m, 1400.0) * 2.0;
+  let s = dot(dir, u.sun.xyz);
+  c += vec3f(1.0, 0.95, 0.85) * (smoothstep(0.99955, 0.99970, s) * 1.5 + pow(max(s, 0.0), 64.0) * 0.06 * u.sun.w);
   let night = 1.0 - smoothstep(0.0, 0.35, u.sun.w);
+  // the moon: a sphere lit by the sun, so its phase follows the real date
+  let md = u.moon.xyz; let cm = dot(dir, md);
+  if (cm > 0.9993) {
+    let q = (dir - md * cm) / 0.0374; let z = sqrt(max(0.0, 1.0 - dot(q, q)));
+    let lit = smoothstep(-0.04, 0.04, dot(normalize(q - md * z), u.sun.xyz));
+    c = mix(c, vec3f(0.92, 0.94, 1.0) * (0.06 + 0.94 * lit), smoothstep(0.9993, 0.99945, cm) * (0.45 + 0.55 * night));
+  }
   let st = hash3(floor(dir * 300.0));
   c += vec3f(step(0.9975, st) * night * smoothstep(0.0, 0.2, dir.y));
   return vec4f(c, 1.0);
@@ -87,7 +92,7 @@ struct PO { @builtin(position) pos: vec4f, @location(0) uv: vec2f, @location(1) 
 
 const GLSL_HEAD = `#version 300 es
 precision highp float; precision highp int;
-layout(std140) uniform U { mat4 vp; mat4 ivp; vec4 cam; vec4 sun; vec4 zenith; vec4 horizon; vec4 light; };
+layout(std140) uniform U { mat4 vp; mat4 ivp; vec4 cam; vec4 sun; vec4 zenith; vec4 horizon; vec4 light; vec4 moon; };
 const vec3 PAL[13] = vec3[13](${common('glsl')});
 float hash3(vec3 p) { return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }
 vec3 fogc(vec3 c, float d) { return mix(c, horizon.rgb, 1.0 - exp(-d * zenith.w)); }
@@ -122,10 +127,15 @@ in vec2 ndc; out vec4 o;
 void main() {
   vec4 w = ivp * vec4(ndc, 1.0, 1.0); vec3 dir = normalize(w.xyz / w.w - cam.xyz);
   vec3 c = mix(horizon.rgb, zenith.rgb, smoothstep(-0.02, 0.5, dir.y));
-  float s = max(dot(dir, sun.xyz), 0.0);
-  c += vec3(1.0, 0.92, 0.75) * (pow(s, 900.0) * 4.0 + pow(s, 12.0) * 0.18 * sun.w);
-  c += vec3(0.85, 0.9, 1.0) * pow(max(dot(dir, -sun.xyz), 0.0), 1400.0) * 2.0;
+  float s = dot(dir, sun.xyz);
+  c += vec3(1.0, 0.95, 0.85) * (smoothstep(0.99955, 0.99970, s) * 1.5 + pow(max(s, 0.0), 64.0) * 0.06 * sun.w);
   float night = 1.0 - smoothstep(0.0, 0.35, sun.w);
+  vec3 md = moon.xyz; float cm = dot(dir, md);
+  if (cm > 0.9993) {
+    vec3 q = (dir - md * cm) / 0.0374; float z = sqrt(max(0.0, 1.0 - dot(q, q)));
+    float lit = smoothstep(-0.04, 0.04, dot(normalize(q - md * z), sun.xyz));
+    c = mix(c, vec3(0.92, 0.94, 1.0) * (0.06 + 0.94 * lit), smoothstep(0.9993, 0.99945, cm) * (0.45 + 0.55 * night));
+  }
   c += vec3(step(0.9975, hash3(floor(dir * 300.0))) * night * smoothstep(0.0, 0.2, dir.y));
   o = vec4(c, 1.0);
 }`,

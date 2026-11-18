@@ -11,7 +11,7 @@ import { webgpu } from './gpu.ts';
 import { ringLayout } from './layout.ts';
 import { forward, invert, mul, perspective, view } from './math.ts';
 import { meshChunk } from './mesh.ts';
-import { cardCanvas, htmlCanvas, postCanvas, quadAt, type Sign, titleCard, workCanvas } from './panels.ts';
+import { cardCanvas, htmlCanvas, plaqueCanvas, postCanvas, quadAt, type Sign, titleCard, workCanvas } from './panels.ts';
 import { Player } from './player.ts';
 import type { Renderer } from './render.ts';
 import { UNIFORM_FLOATS } from './render.ts';
@@ -29,7 +29,7 @@ const popped = () => root.classList.contains('popped');
 
 // ---------------------------------------------------------------- popup
 const popup = initPopup({
-  onOpen: () => keys.clear(),
+  onOpen: () => { keys.clear(); if (document.pointerLockElement) document.exitPointerLock(); },
   onClose: () => canvas.focus({ preventScroll: true }),
 });
 
@@ -47,33 +47,38 @@ player.p = [0.5, PLAZA_Y + 1, 3.5];
 player.pitch = 0.08;
 
 const signs: Sign[] = [];
-const sign = (s: Omit<Sign, 'id' | 'quad'>) => {
-  const sg = { ...s, id: signs.length, quad: quadAt(s.center, s.normal, s.w, s.h) };
+const sign = (s: Omit<Sign, 'id' | 'quad'> & { offset?: number }) => {
+  const sg = { ...s, id: signs.length, quad: quadAt(s.center, s.normal, s.w, s.h, s.offset) };
   signs.push(sg);
   return sg;
 };
 const post = (x: number, z: number, top: number) => { for (let y = PLAZA_Y + 1; y <= top; y++) world.overrides.set(`${x},${y},${z}`, B.Log); };
 
-// straight ahead: the site's name and how to move; clicking it opens the top page
-const card = titleCard('oriom.dev', mobile);
-const titleSign = sign({ canvas: cardCanvas(card), href: '/', label: 'トップを開く', center: [0.5, PLAZA_Y + 3.7, -5], normal: [0, 0, 1], w: 5.6, h: 4.2 });
+// straight ahead: the name, and where its owner belongs (the top page's first list)
+const intro = document.querySelector<HTMLTemplateElement>('template#intro')?.content;
+const affiliations = [...(intro?.querySelectorAll('h1 + ul > li') ?? [])].map((li) => li.textContent?.trim() ?? '').filter(Boolean);
+const card = titleCard('oriom.dev', affiliations);
+const titleSign = sign({ canvas: cardCanvas(card), label: '', center: [0.5, PLAZA_Y + 3.7, -5], normal: [0, 0, 1], w: 5.6, h: 4.2 });
 post(-2, -6, PLAZA_Y + 1); post(2, -6, PLAZA_Y + 1);
 
-// works, then posts, on the arcs around the plaza
+// works, posts and badges, newest first, round the arcs; each year starts with a plaque
+const yearOf = (it: Item) => (it.date ?? '').slice(0, 4) || String(new Date().getFullYear());
+const itemSigns: Sign[] = [];
 items.forEach((it, i) => {
   const sl = layout.slots[i]!;
   const bx = Math.floor(sl.x), bz = Math.floor(sl.z);
-  const lift = 0;
-  post(bx, bz, PLAZA_Y + 1 + lift);
-  sign({
-    canvas: it.kind === 'work' ? workCanvas(it) : postCanvas(it),
+  post(bx, bz, PLAZA_Y + 1);
+  const center = [bx + 0.5, PLAZA_Y + 3.05, bz + 0.5], normal = [sl.nx, 0, sl.nz];
+  itemSigns.push(sign({
+    canvas: it.kind === 'post' ? postCanvas(it) : workCanvas(it),
     href: it.path,
     label: `${it.title} を開く`,
-    center: [bx + 0.5, PLAZA_Y + 3.05 + lift, bz + 0.5],
-    normal: [sl.nx, 0, sl.nz],
-    w: 2.4,
-    h: 1.8,
-  });
+    center, normal, w: 2.4, h: 1.8,
+  }));
+  const prev = items[i - 1];
+  if (!prev || yearOf(prev) !== yearOf(it) || layout.slots[i - 1]!.ring !== sl.ring) {
+    sign({ canvas: plaqueCanvas(yearOf(it)), label: '', center: [center[0]!, PLAZA_Y + 1.5, center[2]!], normal, w: 1.1, h: 0.55, offset: 0.76 }); // clear of the block corners when it faces the plaza at an angle
+  }
 });
 
 // redstone lamps on the floor between the spawn and the title sign: one row per node
@@ -92,7 +97,10 @@ const fitDistance = (w: number, top: number) => {
 const topOf = (s: Sign) => s.center[1]! + s.h / 2;
 // the spawn: the whole title sign in view, and on wide screens the two signs beside it
 // too (whole, not cut off at the edges)
-const besides = signs.slice(1, 3).map((x) => Math.abs(x.center[0]! - titleSign.center[0]!) + x.w / 2);
+const front = (x: Sign) => Math.atan2(-(x.center[0]! - 0.5), -x.center[2]!); // 0 = straight ahead
+const left = itemSigns.filter((x) => front(x) > 0).sort((a, b) => front(a) - front(b))[0];
+const right = itemSigns.filter((x) => front(x) < 0).sort((a, b) => front(b) - front(a))[0];
+const besides = [left, right].filter((x): x is Sign => !!x).map((x) => Math.abs(x.center[0]! - titleSign.center[0]!) + x.w / 2);
 const spanW = innerWidth > innerHeight * 1.2 && besides.length ? 2 * Math.max(titleSign.w / 2, ...besides) : titleSign.w;
 player.p = [0.5, PLAZA_Y + 1, titleSign.center[2]! + fitDistance(spanW, topOf(titleSign))];
 
@@ -125,7 +133,7 @@ function applyStats(s: Stats | null): void {
   titleSign.canvas = cardCanvas(card, s.views != null ? `訪問 ${nf.format(s.views)}` : '');
   items.forEach((it, i) => {
     if (!it.stat) return;
-    const sg = signs[i + 1]!; // signs[0] is the title sign
+    const sg = itemSigns[i]!;
     sg.canvas = workCanvas(it, statText(it.stat));
     renderer?.setPanel(sg.id, sg.quad, sg.canvas);
   });
@@ -175,16 +183,25 @@ const DAY_Z = srgb(0.66, 0.11, hue), DAY_H = srgb(0.88, 0.05, hue);
 const NIGHT_Z = srgb(0.13, 0.03, hue), NIGHT_H = srgb(0.22, 0.04, hue);
 const DUSK = srgb(0.72, 0.13, 45);
 
+const SYNODIC = 29.530588853; // days
+const NEW_MOON = Date.UTC(2000, 0, 6, 18, 14); // a known new moon
+
+// ?debug&at=2026-11-20T23:00 shows the sky of another moment (to check the moon)
+const at = new URLSearchParams(location.search).has('debug') ? new URLSearchParams(location.search).get('at') : null;
 function sky() {
-  const d = new Date();
+  const d = at ? new Date(at) : new Date();
   const hours = d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600;
   const a = ((hours - 6) / 24) * Math.PI * 2; // sunrise in the east (+x) at 6:00
-  const sun = [Math.cos(a), Math.sin(a), 0.3];
-  const l = Math.hypot(...sun);
-  sun.forEach((v, i) => (sun[i] = v / l));
+  // sun and moon share one great circle, tilted towards the south (+z)
+  const TILT = 0.5;
+  const onPath = (t: number) => [Math.cos(t), Math.sin(t) * Math.cos(TILT), Math.sin(t) * Math.sin(TILT)];
+  const sun = onPath(a);
+  // the moon trails the sun by its elongation: new moon with the sun, full moon opposite
+  const age = ((((d.getTime() - NEW_MOON) / 86_400_000) % SYNODIC) + SYNODIC) % SYNODIC;
+  const moon = onPath(a - (age / SYNODIC) * Math.PI * 2);
   const day = Math.min(1, Math.max(0, (sun[1]! + 0.08) / 0.35));
   const dusk = Math.max(0, 1 - Math.abs(sun[1]!) / 0.22);
-  return { sun, day, zenith: mix(NIGHT_Z, DAY_Z, day), horizon: mix(mix(NIGHT_H, DAY_H, day), DUSK, dusk * 0.6) };
+  return { sun, moon, day, zenith: mix(NIGHT_Z, DAY_Z, day), horizon: mix(mix(NIGHT_H, DAY_H, day), DUSK, dusk * 0.6) };
 }
 
 // ---------------------------------------------------------------- input
@@ -193,9 +210,23 @@ const joy = { x: 0, y: 0, id: -1, ox: 0, oy: 0 };
 let look: { id: number; x: number; y: number; moved: number } | null = null;
 let jumpHeld = false;
 
+const MOVE = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
+const locked = () => document.pointerLockElement === canvas;
+const keysText = $('keys');
+const setKeys = () => {
+  keysText.textContent = mobile
+    ? '左下で歩く・右側で見回す・看板をタップで開く'
+    : locked()
+      ? 'マウスで見回す・WASD で歩く・Space でジャンプ・F で飛ぶ・クリックで看板を開く・Esc でマウスを解放'
+      : 'WASD で歩くとマウスで見回せます・ドラッグでも見回せます・看板をクリックで開く';
+};
+setKeys();
+document.addEventListener('pointerlockchange', setKeys);
+// keys are a user gesture: the first step also hands the mouse to the view
 document.addEventListener('keydown', (e) => {
   if (popped() || !root.classList.contains('world') || e.altKey || e.ctrlKey || e.metaKey) return;
   if ((e.target as Element).closest?.('a,button,input,textarea')) return;
+  if (MOVE.has(e.code) && !locked() && !mobile) canvas.requestPointerLock?.()?.catch?.(() => {});
   keys.add(e.code);
   if (e.code === 'KeyF') player.fly = !player.fly;
   if (e.code === 'Enter' || e.code === 'KeyE') activate(aimed());
@@ -205,7 +236,13 @@ document.addEventListener('keyup', (e) => keys.delete(e.code));
 
 // mouse: drag to look, click to open. touch: the left half is a joystick, the right
 // half looks around; a tap opens what it hits.
+document.addEventListener('mousemove', (e) => {
+  if (!locked()) return;
+  player.yaw -= e.movementX * 0.0025;
+  player.pitch = Math.max(-1.55, Math.min(1.55, player.pitch - e.movementY * 0.0025));
+});
 canvas.addEventListener('pointerdown', (e) => {
+  if (locked()) { if (e.button === 0) activate(aimed()); return; } // the crosshair picks
   canvas.setPointerCapture(e.pointerId);
   if (e.pointerType === 'mouse') { if (e.button === 0) look = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: 0 }; return; }
   if (e.clientX < innerWidth / 2 && joy.id < 0) { joy.id = e.pointerId; joy.ox = e.clientX; joy.oy = e.clientY; }
@@ -236,6 +273,18 @@ canvas.addEventListener('pointerup', endTouch);
 canvas.addEventListener('pointercancel', endTouch);
 $('jump').addEventListener('pointerdown', () => (jumpHeld = true));
 $('jump').addEventListener('pointerup', () => (jumpHeld = false));
+
+// ---------------------------------------------------------------- compass
+const DIRS = ['北', '北東', '東', '南東', '南', '南西', '西', '北西'];
+const needle = $('needle'), heading = $('heading');
+let lastDir = -1;
+/** North is -z (behind the title sign), east is +x (where the sun rises). */
+function compass(yaw: number): void {
+  const deg = (((-yaw * 180) / Math.PI) % 360 + 360) % 360;
+  needle.style.transform = `rotate(${-deg}deg)`;
+  const d = Math.round(deg / 45) % 8;
+  if (d !== lastDir) { heading.textContent = DIRS[d]!; lastDir = d; }
+}
 
 // ---------------------------------------------------------------- picking
 let viewProj = new Float32Array(16);
@@ -312,6 +361,7 @@ async function start(): Promise<void> {
       player.step(dt, [Math.max(-1, Math.min(1, mx)), Math.max(-1, Math.min(1, mz))], keys.has('Space') || jumpHeld, keys.has('ShiftLeft') && player.fly || keys.has('KeyC'), keys.has('ShiftLeft') || keys.has('ShiftRight'));
       const a = aimed();
       tip.textContent = a ? a.label : '';
+      compass(player.yaw);
     }
     updateChunks(mobile ? 4 : 7);
     const eye = [player.p[0]!, player.p[1]! + player.eye, player.p[2]!];
@@ -325,6 +375,7 @@ async function start(): Promise<void> {
     u.set([...s.zenith, fog], 40);
     u.set([...s.horizon, 1], 44);
     u.set([0.2 + 0.4 * s.day, 1 - s.day, 0, 0], 48);
+    u.set([...s.moon, 0], 52);
     const f = forward(player.yaw, 0);
     r.render(u, (cx, cz) => {
       const dx = (cx + 0.5) * CS - eye[0]!, dz = (cz + 0.5) * CS - eye[2]!;
