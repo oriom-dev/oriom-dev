@@ -5,7 +5,7 @@ import type { ClusterNode, Stats } from '../shared/types.ts';
 import type { Counter } from './counter.ts';
 
 const UA = 'oriom.dev-stats (+https://oriom.dev)';
-const HISTORY = 90; // samples kept per series (15 min at 10 s)
+const HISTORY = 60; // samples kept per series (1 h at 60 s)
 
 async function getJson(url: string): Promise<any> {
   const r = await fetch(url, { headers: { 'user-agent': UA, accept: 'application/json' }, signal: AbortSignal.timeout(15_000) });
@@ -16,10 +16,7 @@ async function getJson(url: string): Promise<any> {
 /** とんペディア's public user count, the same API info.tompedia.jp uses. */
 export async function tompedia(): Promise<Stats['tompedia']> {
   const j = await getJson('https://www.tompedia.jp/api/public/user');
-  return {
-    total: Number(j.data.total),
-    byYear: (j.data.counts as any[]).map((c) => ({ year: Number(c.entryYear), count: Number(c.count) })),
-  };
+  return { total: Number(j.data.total) };
 }
 
 /** Mosimo posts on the Oriom PDS: no count endpoint exists, so page through every repo. */
@@ -126,12 +123,12 @@ export function startStats(counter: Counter, opts: { agentSocket?: string } = {}
   const s: Stats = { at: new Date().toISOString() };
   const view = new ClusterView();
   const sources: Source[] = [
-    { every: 5 * 60_000, run: async () => { s.tompedia = await tompedia(); } },
-    { every: 10 * 60_000, run: async () => { s.mosimo = await mosimo(); } },
+    { every: 30 * 60_000, run: async () => { s.tompedia = await tompedia(); } },
+    { every: 30 * 60_000, run: async () => { s.mosimo = await mosimo(); } },
   ];
   if (opts.agentSocket) {
     const sock = opts.agentSocket;
-    sources.push({ every: 10_000, run: async () => { s.cluster = { nodes: view.update(await agentRequest(sock)) }; } });
+    sources.push({ every: 60_000, run: async () => { s.cluster = { nodes: view.update(await agentRequest(sock)) }; } });
   }
   for (const src of sources) {
     const tick = () => src.run().catch((e) => console.warn(`stats: ${e.message ?? e}`));

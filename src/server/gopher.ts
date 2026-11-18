@@ -28,22 +28,19 @@ export function handle(app: App, selector: string, host: string, port: number, c
   const sel = selector.trim() || '/';
   const menu = (title: string, rows: string[]) => info(title) + info('') + rows.join('') + `.${CRLF}`;
   if (sel === '/') {
-    return menu('oriom', [
-      info('Web・モバイル・バックエンド・クラウド・セキュリティ'),
-      info(''),
+    return menu('oriom.dev', [
       item('0', 'プロフィール', '/index', host, port),
       item('1', '実績', '/works', host, port),
-      item('1', '記事', '/blog', host, port),
-      item('0', 'バッジ', '/badges', host, port),
-      item('0', 'いま動いているもの', '/stats', host, port),
+      ...(app.list('/blog').length ? [item('1', '記事', '/blog', host, port)] : []),
+      item('0', 'クラスタ', '/stats', host, port),
       info(''),
-      item('h', 'Web で見る（毎回ちがう次元で）', 'URL:https://oriom.dev/', host, port),
-      item('h', 'Gemini で見る', 'URL:gemini://oriom.dev/', host, port),
+      item('h', 'https://oriom.dev/', 'URL:https://oriom.dev/', host, port),
+      item('h', 'gemini://oriom.dev/', 'URL:gemini://oriom.dev/', host, port),
     ]);
   }
   if (sel === '/works' || sel === '/blog') {
     const rows = app.list(sel).map((p) => item('0', p.title, p.path, host, port));
-    return menu(sel === '/works' ? '実績' : '記事', [item('0', '一覧（テキスト）', `${sel}.md`, host, port), info(''), ...rows, info(''), item('1', '← トップ', '/', host, port)]);
+    return menu(sel === '/works' ? '実績' : '記事', [...rows, info(''), item('1', 'oriom.dev', '/', host, port)]);
   }
   const r = app.markdown(sel === '/index' ? '/index.md' : sel, client, 'gopher');
   if (r.status === 301) return handle(app, r.location, host, port, client);

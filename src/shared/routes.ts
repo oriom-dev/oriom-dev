@@ -3,6 +3,9 @@
 
 export const mdPath = (path: string) => (path === '/' ? '/index.md' : `${path}.md`);
 
+/** /works, /blog and /badges are sections of the top page. */
+export const SECTIONS: Record<string, string> = { '/works': 'works', '/blog': 'posts', '/badges': 'badges' };
+
 export type Resolved =
   | { kind: 'page'; path: string; md: boolean }
   | { kind: 'redirect'; location: string };
@@ -15,6 +18,9 @@ export function resolve(raw: string): Resolved {
   if (path.length > 1 && path.endsWith('/')) {
     return { kind: 'redirect', location: encodeURI(path.replace(/\/+$/, '')) || '/' };
   }
+  // sections of the top page that used to be pages of their own
+  const section = SECTIONS[path.replace(/\.md$/, '')];
+  if (section) return path.endsWith('.md') ? { kind: 'redirect', location: '/index.md' } : { kind: 'redirect', location: `/#${section}` };
   if (path === '/index.md') return { kind: 'page', path: '/', md: true };
   if (path === '/index' || path === '/index.html') return { kind: 'redirect', location: '/' };
   if (path.endsWith('.md')) return { kind: 'page', path: path.slice(0, -3), md: true };

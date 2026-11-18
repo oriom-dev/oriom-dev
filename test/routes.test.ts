@@ -7,6 +7,8 @@ test('trailing slashes redirect, .md selects markdown', () => {
   assert.deepEqual(resolve('/'), { kind: 'page', path: '/', md: false });
   assert.deepEqual(resolve('/index.md'), { kind: 'page', path: '/', md: true });
   assert.deepEqual(resolve('/works/'), { kind: 'redirect', location: '/works' });
+  assert.deepEqual(resolve('/works'), { kind: 'redirect', location: '/#works' });
+  assert.deepEqual(resolve('/badges.md'), { kind: 'redirect', location: '/index.md' });
   assert.deepEqual(resolve('/works//mosimo/'), { kind: 'redirect', location: '/works/mosimo' });
   assert.deepEqual(resolve('/works/mosimo.md?x=1'), { kind: 'page', path: '/works/mosimo', md: true });
   assert.deepEqual(resolve('/index.html'), { kind: 'redirect', location: '/' });

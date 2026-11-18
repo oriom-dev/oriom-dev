@@ -6,12 +6,12 @@ import { gzipSync } from 'node:zlib';
 import { VARIANTS, type Post, type SiteBundle } from '../shared/types.ts';
 import { oklchToLinearSrgb } from '../shared/color.ts';
 import { mdPath } from '../shared/routes.ts';
-import { ROOT, loadPosts, loadWorks } from './content.ts';
+import { artAttr } from '../shared/art.ts';
+import { ROOT, loadBadges, loadPosts, loadWorks } from './content.ts';
 import { strokeIcon } from './png.ts';
 import { ORIGIN, PUBLICATION_URI } from './render.ts';
 import { bundleJs } from './templates.ts';
 import { buildPages } from './pages.ts';
-import { graphHtml, layout } from './graph.ts';
 import { template } from './templates.ts';
 
 export function buildSite(extraPosts: Post[] = []): SiteBundle {
@@ -19,13 +19,13 @@ export function buildSite(extraPosts: Post[] = []): SiteBundle {
   const posts = [...loadPosts(), ...extraPosts].sort((a, b) => b.date.localeCompare(a.date));
   const pages = buildPages(works, posts);
 
-  const slots = {
-    map: graphHtml(layout(works)),
-  };
-  const templates = Object.fromEntries(VARIANTS.map((v) => [v, template(v, slots)])) as SiteBundle['templates'];
+  const templates = Object.fromEntries(VARIANTS.map((v) => [v, template(v)])) as SiteBundle['templates'];
   const scriptHashes = Object.fromEntries(VARIANTS.map((v) => [v, inlineScriptHashes(templates[v])])) as SiteBundle['scriptHashes'];
   const version = createHash('sha256').update(JSON.stringify({ templates, pages })).digest('hex').slice(0, 12);
-  return { version, builtAt: new Date().toISOString(), templates, scriptHashes, pages };
+  const badges = loadBadges().map((b) => ({
+    kind: 'badge' as const, path: b.share, title: b.name, date: b.issuedOn.slice(0, 10), summary: b.issuer.name, ...(b.art ? { art: artAttr(b.art) } : {}),
+  }));
+  return { version, builtAt: new Date().toISOString(), templates, scriptHashes, pages, badges };
 }
 
 /** CSP hashes of executable inline scripts (JSON data blocks are not executed). */
@@ -55,7 +55,7 @@ function writeExtras(out: string, site: SiteBundle): void {
   for (const n of [192, 512]) writeFileSync(path.join(out, `icon-${n}.png`), strokeIcon(n, arch, 0.06, fg, bg));
   writeFileSync(path.join(out, 'icon.svg'), `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" fill="${hex(bg)}"/><path d="M10.4 26.2C11.6 22.4 14 10.2 16 10.2S20.4 22.4 21.6 26.2" fill="none" stroke="${hex(fg)}" stroke-width="2" stroke-linecap="round"/></svg>`);
   writeFileSync(path.join(out, 'manifest.webmanifest'), JSON.stringify({
-    name: 'oriom', short_name: 'oriom', lang: 'ja', start_url: '/', scope: '/', id: '/',
+    name: 'oriom.dev', short_name: 'oriom', lang: 'ja', start_url: '/', scope: '/', id: '/',
     display: 'standalone', background_color: hex(bg), theme_color: hex(bg),
     description: '1 次元・2 次元・3 次元のどれかで現れるポートフォリオ。オフラインでも読めます。',
     icons: [
@@ -67,7 +67,7 @@ function writeExtras(out: string, site: SiteBundle): void {
   const paths = Object.keys(site.pages);
   writeFileSync(path.join(out, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${paths.map((p) => `<url><loc>${ORIGIN}${p === '/' ? '' : p}</loc></url>`).join('')}</urlset>\n`);
   writeFileSync(path.join(out, 'robots.txt'), `User-agent: *\nAllow: /\nSitemap: ${ORIGIN}/sitemap.xml\n`);
-  writeFileSync(path.join(out, 'llms.txt'), `# oriom\n\n> oriom のポートフォリオ。どのページも末尾に .md を付けると Markdown で読めます。\n\n${paths.map((p) => `- [${site.pages[p]!.title}](${ORIGIN}${mdPath(p)})`).join('\n')}\n`);
+  writeFileSync(path.join(out, 'llms.txt'), `# oriom.dev\n\n> oriom のポートフォリオ。どのページも末尾に .md を付けると Markdown で読めます。\n\n${paths.map((p) => `- [${site.pages[p]!.title}](${ORIGIN}${mdPath(p)})`).join('\n')}\n`);
   if (PUBLICATION_URI) writeFileSync(path.join(out, 'site.standard.publication'), PUBLICATION_URI);
 }
 

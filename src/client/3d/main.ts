@@ -55,7 +55,7 @@ const sign = (s: Omit<Sign, 'id' | 'quad'>) => {
 const post = (x: number, z: number, top: number) => { for (let y = PLAZA_Y + 1; y <= top; y++) world.overrides.set(`${x},${y},${z}`, B.Log); };
 
 // straight ahead: the site's name and how to move; clicking it opens the top page
-const card = titleCard('oriom', mobile);
+const card = titleCard('oriom.dev', mobile);
 const titleSign = sign({ canvas: cardCanvas(card), href: '/', label: 'トップを開く', center: [0.5, PLAZA_Y + 3.7, -5], normal: [0, 0, 1], w: 5.6, h: 4.2 });
 post(-2, -6, PLAZA_Y + 1); post(2, -6, PLAZA_Y + 1);
 
@@ -77,12 +77,8 @@ items.forEach((it, i) => {
 });
 
 // redstone lamps on the floor between the spawn and the title sign: one row per node
-// for CPU and one for memory, ten lamps each. Their labels stand beside the title
-// sign, inside the gap the arcs leave open, so they hide no other sign.
+// for CPU and one for memory, ten lamps each
 const LAMP_X0 = -4, LAMP_Z0 = -2;
-post(-5, -6, PLAZA_Y + 1); post(6, -6, PLAZA_Y + 1);
-const lampSign = sign({ canvas: labelCanvas('クラスタ', '読み込み中…'), label: 'クラスタの CPU とメモリ', center: [-4.5, PLAZA_Y + 2.55, -5], normal: [0, 0, 1], w: 3.2, h: 1 });
-const numSign = sign({ canvas: labelCanvas('いまの数字', '読み込み中…'), href: '/stats', label: 'いま動いているものを開く', center: [6.5, PLAZA_Y + 2.55, -5], normal: [0, 0, 1], w: 3.2, h: 1 });
 
 const FOVY = 1.15;
 /** How far back to stand so a sign `w` wide whose top is `top` fits the screen both
@@ -94,8 +90,8 @@ const fitDistance = (w: number, top: number) => {
   return Math.max(3.4, across, up);
 };
 const topOf = (s: Sign) => s.center[1]! + s.h / 2;
-// the spawn: the whole title sign in view, with its two labels on wide screens
-const spanW = innerWidth > innerHeight ? 8.1 - -6.1 + 1.2 : titleSign.w;
+// the spawn: the whole title sign in view
+const spanW = titleSign.w;
 player.p = [0.5, PLAZA_Y + 1, titleSign.center[2]! + fitDistance(spanW, topOf(titleSign))];
 
 /** Opened by URL: stand in front of that page's sign (the popup is already open). */
@@ -109,8 +105,12 @@ function spawnAt(path: string): void {
 }
 if (location.pathname !== '/') spawnAt(location.pathname);
 
+const nf = new Intl.NumberFormat('ja-JP');
+/** Live numbers go on the signs they belong to; the lamps show the cluster. */
 function applyStats(s: Stats | null): void {
   if (!s) return;
+  const statText = (k?: string) =>
+    k === 'tompedia' && s.tompedia ? `利用者 ${nf.format(s.tompedia.total)} 人` : k === 'mosimo' && s.mosimo ? `投稿 ${nf.format(s.mosimo.posts)} 件` : '';
   const nodes = (s.cluster?.nodes ?? []).slice(0, 2);
   for (let i = 0; i < 2; i++) {
     const n = nodes[i];
@@ -120,11 +120,15 @@ function applyStats(s: Stats | null): void {
       world.overrides.set(`${LAMP_X0 + k},${PLAZA_Y},${LAMP_Z0 + i * 2 + 1}`, n && mem > k * 10 + 1 ? B.LampOn : B.LampOff);
     }
   }
-  lampSign.canvas = labelCanvas('クラスタ（列ごとに CPU / メモリ）', nodes.map((n) => `${n.name} ${n.cpu?.toFixed(0) ?? '—'}% / ${bytes(n.memory.used)}`).join('・') || 'データなし');
-  numSign.canvas = labelCanvas(`訪問 ${s.views ?? '—'}`, `とんペディア ${s.tompedia?.total ?? '—'}人・Mosimo ${s.mosimo?.posts ?? '—'}件`);
+  titleSign.canvas = cardCanvas(card, s.views != null ? `${nf.format(s.views)}` : '');
+  items.forEach((it, i) => {
+    if (!it.stat) return;
+    const sg = signs[i + 1]!; // signs[0] is the title sign
+    sg.canvas = workCanvas(it, statText(it.stat));
+    renderer?.setPanel(sg.id, sg.quad, sg.canvas);
+  });
   if (renderer) {
-    renderer.setPanel(lampSign.id, lampSign.quad, lampSign.canvas);
-    renderer.setPanel(numSign.id, numSign.quad, numSign.canvas);
+    renderer.setPanel(titleSign.id, titleSign.quad, titleSign.canvas);
     for (const key of ['-1,-1', '0,-1', '-1,0', '0,0']) if (loaded.has(key)) dirty.add(key);
   }
 }

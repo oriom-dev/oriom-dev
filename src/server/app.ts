@@ -5,6 +5,7 @@ import { existsSync, readFileSync, watch } from 'node:fs';
 import path from 'node:path';
 import { randomHue } from '../shared/color.ts';
 import { composeHtml, composeMd, pageData } from '../shared/compose.ts';
+import { compactStats } from '../shared/stats.ts';
 import { resolve } from '../shared/routes.ts';
 import type { PageOut, SiteBundle, Stats, Variant } from '../shared/types.ts';
 import { maybe3d, pickVariant } from '../shared/variant.ts';
@@ -150,7 +151,9 @@ export class App {
       return { status: 200, headers: { 'content-type': file.type, 'cache-control': cache, ...SECURITY }, body: file.body };
     }
     if (url.pathname === '/api/stats') {
-      return { status: 200, headers: { 'content-type': 'application/json', 'cache-control': 'no-store', ...SECURITY }, body: JSON.stringify(this.stats()) };
+      // ?full adds per-container data and history: only the cluster popup asks for it
+      const s = url.searchParams.has('full') ? this.stats() : compactStats(this.stats());
+      return { status: 200, headers: { 'content-type': 'application/json', 'cache-control': 'no-store', ...SECURITY }, body: JSON.stringify(s) };
     }
     if (url.pathname === '/_/page') {
       // the popup's content for a page opened in place (title + body)

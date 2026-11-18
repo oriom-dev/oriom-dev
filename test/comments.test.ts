@@ -32,17 +32,16 @@ const c = (name: string, text: string, replies: Comment[] = []): Comment => ({
 test('comments render escaped, nested, in both Markdown and HTML', () => {
   const cs = { url: 'https://bsky.app/profile/did:plc:me/post/abc', count: 2, comments: [c('<b>Eve</b>', '<script>x</script> *hi*', [c('Bob', 'reply')])] };
   const html = mdToHtml(postMarkdown(post, 'html', cs));
-  assert.match(html, /<h2>コメント（2）<\/h2>/);
+  assert.match(html, /<h2>コメント 2<\/h2>/);
   assert.doesNotMatch(html, /<script>|<b>Eve/);
   assert.match(html, /&lt;script&gt;x&lt;\/script&gt; \*hi\*/);
   assert.match(html, /<ul><li>.*<ul><li>.*Bob/s);
-  assert.match(html, /href="https:\/\/bsky\.app\/profile\/did:plc:me\/post\/abc">Bluesky で返信する/);
+  assert.match(html, /href="https:\/\/bsky\.app\/profile\/did:plc:me\/post\/abc">Bluesky で返信する</);
   const md = postMarkdown(post, 'md', cs);
   assert.match(md, /^- \*\*\\<b\\>Eve\\<\/b\\>\*\*（@x\.test/m);
   assert.match(md, /^  - \*\*Bob\*\*/m);
 });
 
-test('a post announced on Bluesky but without replies yet invites one', () => {
-  assert.match(postMarkdown(post, 'md'), /## コメント（0）\n\n_まだコメントはありません。/);
-  assert.match(postMarkdown(post, 'md'), /\[Bluesky で返信する →\]\(https:\/\/bsky\.app\/profile\/did:plc:me\/post\/abc\)/);
+test('a post announced on Bluesky but without replies yet links to the thread', () => {
+  assert.match(postMarkdown(post, 'md'), /## コメント 0\n\n\[Bluesky で返信する\]\(https:\/\/bsky\.app\/profile\/did:plc:me\/post\/abc\)/);
 });

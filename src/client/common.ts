@@ -22,17 +22,19 @@ export function renderStats(s: Stats | null): void {
   document.dispatchEvent(new CustomEvent('stats', { detail: s }));
 }
 
+/** Once a minute while the tab is visible; the full cluster data only while it is shown. */
 function pollStats(): void {
-  if (!document.querySelector('dl[data-stats]') && !document.documentElement.dataset.live) return;
   const tick = async () => {
-    if (document.hidden) return;
+    if (document.hidden || !document.querySelector('[data-stats]') && document.documentElement.dataset.v !== '3d') return;
+    const full = !!document.querySelector('.pop:not([hidden]) dl[data-stats="full"]');
     try {
-      const r = await fetch('/api/stats', { cache: 'no-store' });
+      const r = await fetch(full ? '/api/stats?full' : '/api/stats', { cache: 'no-store' });
       if (r.ok) renderStats(await r.json());
     } catch { /* offline: keep the last values */ }
   };
-  setInterval(tick, 20_000);
-  document.addEventListener('visibilitychange', tick);
+  setInterval(tick, 60_000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
+  document.addEventListener('stats-dom', tick);
 }
 
 /** Tell the server not to pick the 3D page for this browser if it cannot run it. */

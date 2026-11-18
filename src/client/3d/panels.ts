@@ -49,8 +49,8 @@ function frame(ctx: CanvasRenderingContext2D, W: number, H: number): void {
 }
 
 const NOTES = {
-  desktop: ['WASD・矢印キーで歩く／ドラッグで見回す', 'Space でジャンプ／F で飛ぶ', '振り返ると実績と記事の看板が並んでいます', '看板をクリックすると開きます'],
-  touch: ['左下をドラッグして歩く／右側をドラッグで見回す', '▲ でジャンプ', '振り返ると実績と記事の看板が並んでいます', '看板をタップすると開きます'],
+  desktop: ['WASD・矢印キーで歩く／ドラッグで見回す', 'Space でジャンプ／F で飛ぶ', '看板をクリックで開く'],
+  touch: ['左下をドラッグして歩く／右側で見回す', '▲ でジャンプ', '看板をタップで開く'],
 };
 
 /** The title card: what is in view first. A real element, so HTML-in-Canvas can paint it. */
@@ -66,8 +66,9 @@ export function titleCard(title: string, touch: boolean): HTMLElement {
   return el;
 }
 
-/** The same card drawn by hand, for browsers without HTML-in-Canvas. */
-export function cardCanvas(card: HTMLElement): HTMLCanvasElement {
+/** The same card drawn by hand, for browsers without HTML-in-Canvas. `corner` is a
+ *  number in the bottom right (the visit counter). */
+export function cardCanvas(card: HTMLElement, corner = ''): HTMLCanvasElement {
   const W = 1024, H = 768;
   const cv = Object.assign(document.createElement('canvas'), { width: W, height: H });
   const ctx = cv.getContext('2d')!;
@@ -83,11 +84,16 @@ export function cardCanvas(card: HTMLElement): HTMLCanvasElement {
   ctx.font = `300 32px ${FONT}`;
   let ly = y + 64;
   for (const li of card.querySelectorAll('li')) { ctx.fillText(li.textContent ?? '', 72, ly, W - 144); ly += 52; }
+  if (corner) {
+    ctx.textAlign = 'right';
+    ctx.font = `200 40px ${FONT}`;
+    ctx.fillText(corner, W - 72, H - 110);
+  }
   return cv;
 }
 
-/** A work's sign: its line drawing, title and summary. */
-export function workCanvas(it: Item): HTMLCanvasElement {
+/** A work's sign: its line drawing, title and summary, and its live number if it has one. */
+export function workCanvas(it: Item, stat = ''): HTMLCanvasElement {
   const W = 512, H = 384;
   const cv = Object.assign(document.createElement('canvas'), { width: W, height: H });
   const ctx = cv.getContext('2d')!;
@@ -108,7 +114,13 @@ export function workCanvas(it: Item): HTMLCanvasElement {
   const y = wrap(ctx, it.title, 32, 220, W - 64, 38, 262);
   ctx.font = `300 20px ${FONT}`;
   ctx.fillStyle = css('--muted') || '#666';
-  wrap(ctx, it.summary, 32, y - 6, W - 64, 27, 330);
+  wrap(ctx, it.summary, 32, y - 6, W - 64, 27, stat ? 300 : 330);
+  if (stat) {
+    ctx.fillStyle = css('--fg') || '#000';
+    ctx.font = `400 24px ${FONT}`;
+    ctx.textAlign = 'right';
+    ctx.fillText(stat, W - 32, H - 52);
+  }
   return cv;
 }
 

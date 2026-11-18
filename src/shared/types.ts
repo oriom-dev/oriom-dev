@@ -63,20 +63,20 @@ export interface Badge {
   art?: import('./art.ts').Art;
 }
 
-export interface BadgeStatus { ok: boolean; at: string; note: string }
-
 /** Comments per post path: the Bluesky thread URL and its replies. */
 export type Comments = Record<string, { url: string; count: number; comments: Comment[] }>;
 
 /** What a sign in the 3D world needs to know about a work or a post. */
 export interface Item {
-  kind: 'work' | 'post';
+  kind: 'work' | 'post' | 'badge';
   path: string;
   title: string;
   date?: string;
   summary: string;
   by?: string; // posts from other sites
+  stat?: string; // a live number shown on its sign (tompedia, mosimo)
   art?: string; // data-art attribute value
+  tags?: string[]; // technologies of a work
 }
 
 /** A page as served: everything except the variant template, hue and live stats. */
@@ -84,6 +84,7 @@ export interface PageOut {
   path: string;
   title: string;
   item?: Item;
+  intro?: string; // the top page without its lists: what the 2D view puts above the years
   head: string; // <title>, meta, link tags
   body: string; // content HTML; may contain <!--@stats:*--> slots
   md: string; // markdown version; may contain <!--@stats:*--> slots
@@ -96,13 +97,15 @@ export interface SiteBundle {
   /** script-src hashes per template, for the Content-Security-Policy header. */
   scriptHashes: Record<Variant, string[]>;
   pages: Record<string, PageOut>;
+  /** Badges are not pages: they link to the issuer. */
+  badges?: Item[];
   stats?: Stats;
 }
 
 export interface Stats {
   at: string;
   views?: number;
-  tompedia?: { total: number; byYear: { year: number; count: number }[] };
+  tompedia?: { total: number };
   mosimo?: { posts: number; authors: number };
   cluster?: ClusterSummary;
 }

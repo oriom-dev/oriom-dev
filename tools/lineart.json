@@ -3,36 +3,37 @@
     "src": "tompedia.svg",
     "title": "とんペディアのロゴ",
     "threshold": 80,
-    "max_strokes": 8,
-    "min_len": 0.05
+    "size": 400,
+    "min_len": 0.03
   },
   "lens": {
     "src": "lens.png",
     "title": "LENS のフクロウ",
-    "threshold": 90,
-    "max_strokes": 10,
-    "min_len": 0.08
+    "threshold": 60,
+    "size": 400,
+    "min_len": 0.03
   },
   "linkm": {
     "src": "linkm.png",
     "title": "リンクエムの LM",
     "threshold": 90,
-    "sigma": 1.6,
-    "max_strokes": 4
+    "size": 400
   },
   "erb": {
     "src": "erb.svg",
     "title": "ドイツ相続法情報室の「ド」",
     "threshold": 80,
-    "max_strokes": 3
+    "size": 400
   },
   "ifg-pathleader": {
     "src": "ifg-pathleader.png",
     "title": "IFG Pathleader のアイコン",
-    "threshold": 70,
-    "close": 2,
-    "max_strokes": 4,
-    "min_len": 0.1
+    "mask": "bright",
+    "threshold": 215,
+    "size": 400,
+    "min_len": 0.03,
+    "drop_frame": true,
+    "close": 0
   },
   "kytos": {
     "mode": "proc",

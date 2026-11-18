@@ -117,7 +117,7 @@ export function buildThread(root: HTMLElement): string {
     pen.to([lane(), y]);
   };
 
-  const sel = '#c h1,#c h2,#c li,#c table,#c pre,#c dl.stats,#c blockquote,.pop-end';
+  const sel = '#c h1,#c h2,#c li,#c table,#c pre,#c dl.stats[data-stats="full"],#c blockquote,.pop-end';
   for (const el of root.querySelectorAll(sel)) {
     const b = box(el);
     const gapAbove = parseFloat(getComputedStyle(el).marginTop) || 12;
@@ -135,7 +135,7 @@ export function buildThread(root: HTMLElement): string {
       case 'LI': {
         if (el.querySelector(':scope > a > figure.art')) break; // a work with its drawing: no bullet
         const list = el.parentElement!;
-        if (list.tagName !== 'UL') break;
+        if (list.tagName !== 'UL' || list.className) break; // designed lists (tags, facts, works) get no bullet
         if (side === 'R') cross('L', box(list).t - (parseFloat(getComputedStyle(list).marginTop) || 12) / 2 - 4);
         const fl = firstLine(el);
         const cy = (fl.t + fl.b) / 2;

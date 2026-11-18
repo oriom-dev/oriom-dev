@@ -30,7 +30,7 @@ test('Gemini responses', () => {
 
 test('Gopher menus and text', () => {
   const root = gopher(app, '', 'oriom.dev', 70);
-  assert.match(root, /^ioriom\t\terror\.host\t1\r\n/);
+  assert.match(root, /^ioriom\.dev\t\terror\.host\t1\r\n/);
   assert.match(root, /\r\n1実績\t\/works\toriom\.dev\t70\r\n/);
   assert.ok(root.endsWith('\r\n.\r\n'));
   assert.match(gopher(app, '/works', 'oriom.dev', 70), /\r\n0Mosimo Protocol\t\/works\/mosimo\toriom\.dev\t70\r\n/);
@@ -47,10 +47,10 @@ test('Gemini over TLS', async () => {
   await new Promise<void>((r) => srv.listen(0, '127.0.0.1', () => r()));
   const { port } = srv.address() as { port: number };
   const body = await new Promise<string>((resolve, reject) => {
-    const s = tls.connect({ host: '127.0.0.1', port, rejectUnauthorized: false }, () => s.write('gemini://localhost/blog\r\n'));
+    const s = tls.connect({ host: '127.0.0.1', port, rejectUnauthorized: false }, () => s.write('gemini://localhost/stats\r\n'));
     let d = '';
     s.on('data', (c) => (d += c)).on('end', () => resolve(d)).on('error', reject);
   });
   srv.close();
-  assert.match(body, /^20 text\/gemini.*\r\n# 記事/);
+  assert.match(body, /^20 text\/gemini.*\r\n# クラスタ/);
 });

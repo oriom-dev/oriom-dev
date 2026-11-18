@@ -23,7 +23,7 @@ test('pages, markdown, redirects and 404', () => {
   assert.match(html.headers['content-security-policy']!, /script-src 'sha256-/);
   const md = app.respond({ path: '/index.md', protocol: 'http' });
   assert.match(md.headers['content-type']!, /text\/markdown/);
-  assert.match(String(md.body), /^# oriom/);
+  assert.match(String(md.body), /^# oriom\.dev/);
   assert.equal(app.respond({ path: '/works/?a=1', protocol: 'http' }).headers.location, '/works?a=1');
   assert.equal(app.respond({ path: '/nope', protocol: 'http' }).status, 404);
   assert.equal(app.respond({ path: '/?v=2d', protocol: 'http', userAgent: chrome }).variant, '2d');
@@ -50,9 +50,12 @@ test('HTTP/0.9 returns the bare body and closes', async () => {
     const chunks: Buffer[] = [];
     s.on('data', (c) => chunks.push(c)).on('close', () => resolve(Buffer.concat(chunks).toString()));
   });
-  assert.match(await get('GET /works.md\r\n'), /^# 実績/);
-  assert.match(await get('GET /\n'), /^<!doctype html>/);
-  assert.match(await get('GET /works/\r\n'), /^<!doctype html>/); // redirect is followed: 0.9 has no status
-  assert.equal(await get('POST / HTTP/1.1\r\n'), '');
-  srv.close();
+  try {
+    assert.match(await get('GET /stats.md\r\n'), /^# クラスタ/);
+    assert.match(await get('GET /\n'), /^<!doctype html>/);
+    assert.match(await get('GET /works/mosimo/\r\n'), /^<!doctype html>/); // redirect is followed: 0.9 has no status
+    assert.equal(await get('POST / HTTP/1.1\r\n'), '');
+  } finally {
+    srv.close();
+  }
 });

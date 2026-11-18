@@ -10,7 +10,7 @@ const LIMIT = 512 * 1000; // 512 KB, decimal, uncompressed: the strictest readin
 // Large but realistic stats so the slots are measured filled, not empty.
 const stats: Stats = {
   at: new Date().toISOString(), views: 1234567,
-  tompedia: { total: 99999, byYear: [] }, mosimo: { posts: 99999, authors: 999 },
+  tompedia: { total: 99999 }, mosimo: { posts: 99999, authors: 999 },
   cluster: { nodes: ['kagoya-vps', 'home-desktop'].map((name) => ({
     name, cpus: 16, load: [9.99, 9.99, 9.99], cpu: 99.9, memory: { used: 1e10, total: 3e10 }, rx: 1e6, tx: 1e6, uptime: 1e7,
     containers: Array.from({ length: 40 }, (_, i) => ({ name: `container-name-${i}`, cpu: 1.234, memory: 123456789 })),

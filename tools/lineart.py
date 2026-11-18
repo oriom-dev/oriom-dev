@@ -66,20 +66,33 @@ def resample(pts, spacing):
 
 
 def logo_strokes(img, cfg):
+    """Every contour that matters, lightly smoothed and then thinned to the few points a
+    Catmull-Rom curve needs: the drawing keeps its parts, the file stays small."""
     h, w, _ = img.shape
-    corners = np.array([img[0, 0], img[0, -1], img[-1, 0], img[-1, -1]], float)
-    bg = np.array(cfg['bg'], float) if 'bg' in cfg else np.median(corners, axis=0)
-    m = (np.linalg.norm(img.astype(float) - bg, axis=2) > cfg.get('threshold', 70)).astype(np.uint8)
-    k = cfg.get('close', 2)
-    m = cv2.morphologyEx(m, cv2.MORPH_CLOSE, np.ones((2 * k + 1, 2 * k + 1), np.uint8))
-    m = cv2.morphologyEx(m, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+    if cfg.get('mask') == 'bright':  # light shapes on a busy background
+        m = (img.astype(float).mean(axis=2) > cfg.get('threshold', 200)).astype(np.uint8)
+    else:
+        corners = np.array([img[0, 0], img[0, -1], img[-1, 0], img[-1, -1]], float)
+        bg = np.array(cfg['bg'], float) if 'bg' in cfg else np.median(corners, axis=0)
+        m = (np.linalg.norm(img.astype(float) - bg, axis=2) > cfg.get('threshold', 70)).astype(np.uint8)
+    k = cfg.get('close', 1)
+    if k:
+        m = cv2.morphologyEx(m, cv2.MORPH_CLOSE, np.ones((2 * k + 1, 2 * k + 1), np.uint8))
     mode = cv2.RETR_LIST if cfg.get('holes', True) else cv2.RETR_EXTERNAL
     cs, _ = cv2.findContours(m, mode, cv2.CHAIN_APPROX_NONE)
+    size = (w + h) / 2
     cs = sorted((c[:, 0, :].astype(float) for c in cs), key=lambda c: -cv2.arcLength(c.astype(np.float32), True))
-    cs = [c for c in cs if cv2.arcLength(c.astype(np.float32), True) >= cfg.get('min_len', 0.12) * (w + h)]
-    cs = cs[:cfg.get('max_strokes', 12)]
-    spacing = cfg.get('spacing', 0.025) * (w + h) / 2
-    return [(smooth_closed(c, cfg.get('sigma', 2.5) * (w + h) / 640, spacing), True) for c in cs]
+    cs = [c for c in cs if cv2.arcLength(c.astype(np.float32), True) >= cfg.get('min_len', 0.04) * size]
+    if cfg.get('drop_frame'):  # the image border itself, when the shape fills the canvas
+        cs = [c for c in cs if not (c[:, 0].min() <= 1 and c[:, 1].min() <= 1 and c[:, 0].max() >= w - 2 and c[:, 1].max() >= h - 2)]
+    cs = cs[:cfg.get('max_strokes', 40)]
+    out = []
+    for c in cs:
+        sm = smooth_closed(c, cfg.get('sigma', 0.9), 1.0)
+        poly = cv2.approxPolyDP(sm.astype(np.float32).reshape(-1, 1, 2), cfg.get('eps', 0.006) * size, True)[:, 0, :]
+        if len(poly) >= 3:
+            out.append((poly.astype(float), True))
+    return out
 
 
 def rounded_rect(x, y, w, h, r, n=10):

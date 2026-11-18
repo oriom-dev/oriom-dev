@@ -1,7 +1,7 @@
 import { Marked } from 'marked';
 import { artAttr, separatePath, type Art } from '../shared/art.ts';
 import { mdPath } from '../shared/routes.ts';
-import type { Badge, BadgeStatus, Comment, Comments, Item, PageOut, Post, Work } from '../shared/types.ts';
+import type { Badge, Comment, Comments, Item, PageOut, Post, Work } from '../shared/types.ts';
 import { AUTHOR, loadStandard } from './content.ts';
 
 export const ORIGIN = 'https://oriom.dev';
@@ -19,13 +19,11 @@ const KIND: Record<string, string> = {
 };
 export const kindLabel = (k: string) => KIND[k] ?? k;
 
-export interface Ctx { works: Work[]; posts: Post[]; badges?: Badge[]; badgeStatus?: Record<string, BadgeStatus> }
+export interface Ctx { works: Work[]; posts: Post[]; badges?: Badge[] }
 export type Target = 'md' | 'html';
+export const SITE = 'oriom.dev';
 
-/**
- * A line drawing. `data-art` feeds the 1D thread; the inline SVG is the same curve
- * for the other designs and for browsers without JavaScript.
- */
+/** A line drawing, as inline SVG (each stroke drawn on its own). */
 export function figure(a: Art, label: string, cls = ''): string {
   const h = Math.round(1000 / a.aspect);
   const d = separatePath(a);
@@ -33,16 +31,27 @@ export function figure(a: Art, label: string, cls = ''): string {
     + `<svg viewBox="0 0 1000 ${h}" aria-hidden="true"><path d="${d}"/></svg></figure>`;
 }
 
+const year = (d?: string) => (d ? d.slice(0, 4) : '');
+const ymd = (s: string) => s.slice(0, 10);
+const mdText = (s: string) => s.replace(/[\\`*_[\]<>#|]/g, (c) => `\\${c}`);
+
 export const workItem = (w: Work) =>
   `<li><a href="/works/${w.slug}">${w.art ? figure(w.art, w.art.title ?? w.title, 'thumb') : ''}`
-  + `<b>${esc(w.title)}</b>${w.date ? `<time datetime="${w.date}">${w.date.slice(0, 4)}</time>` : ''}`
-  + `<span>${esc(w.summary)}</span>${w.awards.length ? `<small>受賞 ${w.awards.length}</small>` : ''}</a></li>`;
+  + `<b>${esc(w.title)}</b>${w.date ? `<time datetime="${w.date}">${year(w.date)}</time>` : ''}`
+  + `<span>${esc(w.summary)}</span>${w.stat ? `<!--@stats:${w.stat}-->` : ''}`
+  + `${w.tech.length ? `<ul class="tags">${w.tech.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}</a></li>`;
+const workLine = (w: Work) => `- [${mdText(w.title)}](/works/${w.slug}) ${year(w.date)}：${w.summary}`;
 
-const workLine = (w: Work) =>
-  `- [${w.title}](/works/${w.slug})${w.date ? `（${w.date.slice(0, 4)}）` : ''}：${w.summary}${w.awards.length ? ` 🏆×${w.awards.length}` : ''}`;
-const mdText = (s: string) => s.replace(/[\\`*_[\]<>#|]/g, (c) => `\\${c}`);
+const postItem = (p: Post) =>
+  `<li><a href="${esc(p.path)}"><time datetime="${p.date}">${p.date}</time><b>${esc(p.title)}</b>`
+  + `${p.author.did !== AUTHOR.did ? `<small>${esc(p.author.name)}</small>` : ''}</a></li>`;
 const postLine = (p: Post) =>
   `- ${p.date} [${mdText(p.title)}](${p.path})${p.author.did !== AUTHOR.did ? `（${mdText(p.author.name)}）` : ''}`;
+
+const badgeItem = (b: Badge) =>
+  `<li><a href="${esc(b.share)}">${b.art ? figure(b.art, b.art.title ?? b.name, 'thumb') : ''}`
+  + `<b>${esc(b.name)}</b><span>${esc(b.issuer.name)}</span><time datetime="${ymd(b.issuedOn)}">${ymd(b.issuedOn)}</time></a></li>`;
+const badgeLine = (b: Badge) => `- [${mdText(b.name)}](${b.share})：${b.issuer.name}・${ymd(b.issuedOn)}`;
 
 const LINKS = [
   ['GitHub', 'https://github.com/oriom-dev', '@oriom-dev'],
@@ -50,78 +59,60 @@ const LINKS = [
   ['Team JISAKU', 'https://jisaku.dev', 'jisaku.dev'],
 ] as const;
 
-/** Expand `{{name:arg}}` lines into Markdown (stats become serve-time slots). */
+/** A section of the top page that can be linked as /#id. */
+function section(id: string, heading: string, html: string, md: string, target: Target): string {
+  return target === 'html' ? `<section id="${id}"><h2>${heading}</h2>${html}</section>` : `## ${heading}\n\n${md}`;
+}
+
+/** Expand `{{name:arg}}` lines (stats become serve-time slots). Empty sections vanish. */
 export function expand(md: string, ctx: Ctx, target: Target = 'md'): string {
   return md.replace(/^\{\{(\w+)(?::(\w+))?\}\}$/gm, (_, name: string, arg = '') => {
     switch (name) {
-      case 'works': {
-        const ws = arg === 'featured' ? ctx.works.slice(0, 6) : ctx.works;
-        const more = arg === 'featured' ? '\n\n[すべての実績 →](/works)' : '';
-        if (target === 'html') return `<ul class="works">${ws.map(workItem).join('')}</ul>${more}`;
-        return ws.map(workLine).join('\n') + more;
-      }
-      case 'posts': {
-        const n = arg === 'all' ? Infinity : Number(arg) || 5;
-        return ctx.posts.slice(0, n).map(postLine).join('\n') || '_まだ記事はありません。_';
+      case 'works':
+        return section('works', '実績', `<ul class="works">${ctx.works.map(workItem).join('')}</ul>`, ctx.works.map(workLine).join('\n'), target);
+      case 'posts':
+        return ctx.posts.length ? section('posts', '記事', `<ul class="posts">${ctx.posts.map(postItem).join('')}</ul>`, ctx.posts.map(postLine).join('\n'), target) : '';
+      case 'badges': {
+        const bs = ctx.badges ?? [];
+        return bs.length ? section('badges', 'バッジ', `<ul class="badges">${bs.map(badgeItem).join('')}</ul>`, bs.map(badgeLine).join('\n'), target) : '';
       }
       case 'stats':
-        return `<!--@stats:${arg || 'summary'}-->`;
+        return `<!--@stats:${arg || 'full'}-->`;
       case 'links':
-        return LINKS.map(([l, u, t]) => `- ${l}：[${t}](${u})`).join('\n');
-      case 'badges':
-        return (ctx.badges ?? []).map((b) => badgeSection(b, ctx.badgeStatus?.[b.slug], target)).join('\n\n') || '_まだありません。_';
+        return target === 'html'
+          ? `<ul class="links">${LINKS.map(([l, u, t]) => `<li><a href="${u}">${l} <span>${t}</span></a></li>`).join('')}</ul>`
+          : LINKS.map(([l, u, t]) => `- ${l}：[${t}](${u})`).join('\n');
       default:
         throw new Error(`unknown directive {{${name}}}`);
     }
   });
 }
 
-const ymd = (s: string) => s.slice(0, 10);
-
-/** One badge: what it is, who issued it, whether the issuer still vouches for it, and
- *  the recipient hash, which anyone who knows the address can check. */
-export function badgeSection(b: Badge, st: BadgeStatus | undefined, target: Target): string {
-  const status = st ? `${st.ok ? '✓ ' : '✗ '}${st.note}（${ymd(st.at)} に確認）` : '発行元への確認はまだです';
-  const hash = b.recipient.identity.replace(/^sha256\$/, '');
-  const rows: [string, string][] = [
-    ['発行者', b.issuer.url ? `[${b.issuer.name}](${b.issuer.url})` : b.issuer.name],
-    ['発行日', ymd(b.issuedOn)],
-    ['検証', status],
-    ['受領者', `メールアドレスの SHA-256（ソルト ${b.recipient.salt ?? 'なし'}）\`${hash.slice(0, 16)}…\``],
-  ];
-  const parts = [
-    `## ${b.name}`,
-    target === 'html' && b.art ? figure(b.art, b.art.title ?? b.name, 'badge') : '',
-    `| | |\n|---|---|\n${rows.map(([k, v]) => `| ${k} | ${v} |`).join('\n')}`,
-    b.description.replace(/\n{2,}/g, '\n\n'),
-    b.criteria && `**取得の条件**：${b.criteria.replace(/\s*\n\s*/g, ' ')}`,
-    target === 'html'
-      ? `<form class="badge-check" data-identity="${esc(b.recipient.identity)}" data-salt="${esc(b.recipient.salt ?? '')}"><label>受領者のメールアドレスで照合 <input type="email" name="email" autocomplete="off" spellcheck="false"></label> <button type="submit">照合</button> <output></output></form>\n\n<p class="note">入力したアドレスはこのブラウザの中でハッシュにするだけで、どこにも送りません。</p>`
-      : '',
-    `[アサーション（JSON）](${b.assertion})・[発行元のページ](${b.share})`,
-  ];
-  return parts.filter(Boolean).join('\n\n');
-}
-
+/** A work: the facts as a short line and tags, laid out instead of labelled. */
 export function workMarkdown(w: Work, target: Target = 'md'): string {
-  const rows: [string, string][] = [];
-  if (w.date) rows.push(['時期', w.date.length === 4 ? `${w.date} 年度` : w.date]);
-  rows.push(['種別', kindLabel(w.kind)]);
-  if (w.team) rows.push(['チーム', w.team]);
-  if (w.role.length) rows.push(['担当', w.role.join('、')]);
-  if (w.tech.length) rows.push(['技術', w.tech.join('、')]);
-  const awards = w.awards.map((a) => `- ${a.date}：${a.name}`).join('\n');
-  const links = w.links.map((l) => `- [${l.label}](${l.url})`).join('\n');
+  const when = w.date ? (w.date.length === 4 ? `${w.date} 年度` : w.date) : '';
+  const facts = [when, kindLabel(w.kind), w.team ?? ''].filter(Boolean);
+  const stat = w.stat ? `<!--@stats:${w.stat}-->` : '';
+  if (target === 'md') {
+    return [
+      `# ${w.title}`, w.summary, `${facts.join(' · ')}${stat ? ` · ${stat}` : ''}`,
+      w.role.length ? `担当：${w.role.join('、')}` : '', w.tech.length ? `技術：${w.tech.join('、')}` : '',
+      w.body,
+      w.awards.map((a) => `- 🏆 ${a.date} ${a.name}`).join('\n'),
+      w.links.map((l) => `- [${l.label}](${l.url})`).join('\n'),
+    ].filter(Boolean).join('\n\n');
+  }
+  const li = (xs: string[]) => xs.map((x) => `<li>${esc(x)}</li>`).join('');
   return [
     `# ${w.title}`,
-    target === 'html' && w.art ? figure(w.art, w.art.title ?? w.title, 'hero') : '',
-    `> ${w.summary}`,
-    `| | |\n|---|---|\n${rows.map(([k, v]) => `| ${k} | ${v} |`).join('\n')}`,
+    w.art ? figure(w.art, w.art.title ?? w.title, 'hero') : '',
+    `<p class="lead">${esc(w.summary)}</p>`,
+    `<ul class="facts">${li(facts)}${stat ? `<li>${stat}</li>` : ''}</ul>`
+      + (w.role.length ? `<ul class="roles">${li(w.role)}</ul>` : '')
+      + (w.tech.length ? `<ul class="tags">${li(w.tech)}</ul>` : ''),
     w.body,
-    w.stat ? `<!--@stats:${w.stat}-->` : '',
-    awards && `## 受賞\n\n${awards}`,
-    links && `## リンク\n\n${links}`,
-    '[← 実績一覧](/works)',
+    w.awards.length ? `<ul class="awards">${w.awards.map((a) => `<li><time datetime="${a.date}">${a.date}</time>${esc(a.name)}</li>`).join('')}</ul>` : '',
+    w.links.length ? `<ul class="links">${w.links.map((l) => `<li><a href="${esc(l.url)}">${esc(l.label)}</a></li>`).join('')}</ul>` : '',
   ].filter(Boolean).join('\n\n');
 }
 
@@ -148,13 +139,13 @@ function commentsHtml(cs: Comment[]): string {
 /** The comment section: replies to the post's Bluesky announcement. */
 export function commentSection(c: Comments[string] | undefined, target: Target): string {
   if (!c) return '';
-  const head = `## コメント（${c.count}）`;
+  const head = `## コメント ${c.count}`;
   const shown = (cs: Comment[]): number => cs.reduce((n, x) => n + 1 + shown(x.replies), 0);
   const more = c.count > shown(c.comments) ? `ほかの ${c.count - shown(c.comments)} 件は Bluesky で読めます。 ` : '';
-  const reply = `${more}[Bluesky で返信する →](${c.url})`;
-  const none = '_まだコメントはありません。Bluesky で返信すると、ここに表示されます。_';
-  if (target === 'md') return `${head}\n\n${c.count ? commentsMd(c.comments) : none}\n\n${reply}`;
-  return `${head}\n\n<div class="comments">${c.count ? commentsHtml(c.comments) : `<p><em>まだコメントはありません。Bluesky で返信すると、ここに表示されます。</em></p>`}</div>\n\n${reply}`;
+  const reply = `${more}[Bluesky で返信する](${c.url})`;
+  const none = '';
+  if (target === 'md') return [head, c.count ? commentsMd(c.comments) : none, reply].filter(Boolean).join('\n\n');
+  return [head, c.count ? `<div class="comments">${commentsHtml(c.comments)}</div>` : '', reply].filter(Boolean).join('\n\n');
 }
 
 export function postMarkdown(p: Post, target: Target = 'md', comments?: Comments[string]): string {
@@ -163,14 +154,14 @@ export function postMarkdown(p: Post, target: Target = 'md', comments?: Comments
   const body = p.external ? plain(p.body, target) : p.body;
   const title = p.external && target === 'html' ? esc(p.title) : p.title;
   const cs = commentSection(comments ?? (p.bsky ? { url: `https://bsky.app/profile/${p.bsky.uri.split('/')[2]}/post/${p.bsky.uri.split('/').pop()}`, count: 0, comments: [] } : undefined), target);
-  return `# ${title}\n\n${p.date}${by}${p.tags.length ? `・${p.tags.map((t) => `#${target === 'html' ? esc(t) : t}`).join(' ')}` : ''}\n\n${body}${ext}${cs && `\n\n${cs}`}\n\n[← 記事一覧](/blog)`;
+  return `# ${title}\n\n${p.date}${by}${p.tags.length ? `・${p.tags.map((t) => `#${target === 'html' ? esc(t) : t}`).join(' ')}` : ''}\n\n${body}${ext}${cs && `\n\n${cs}`}`;
 }
 
 export interface HeadMeta { path: string; title: string; description: string; type?: 'website' | 'article'; atUri?: string; published?: string }
 
 export function head(m: HeadMeta): string {
   const url = ORIGIN + (m.path === '/' ? '' : m.path);
-  const title = m.path === '/' ? m.title : `${m.title} | oriom`;
+  const title = m.path === '/' ? SITE : `${m.title} | ${SITE}`;
   return [
     `<title>${esc(title)}</title>`,
     `<meta name="description" content="${esc(m.description)}">`,
@@ -180,7 +171,7 @@ export function head(m: HeadMeta): string {
     `<meta property="og:description" content="${esc(m.description)}">`,
     `<meta property="og:url" content="${url}">`,
     `<meta property="og:type" content="${m.type ?? 'website'}">`,
-    `<meta property="og:site_name" content="oriom">`,
+    `<meta property="og:site_name" content="${SITE}">`,
     m.published ? `<meta property="article:published_time" content="${m.published}">` : '',
     m.atUri ? `<link rel="site.standard.document" href="${esc(m.atUri)}">` : '',
     PUBLICATION_URI ? `<link rel="site.standard.publication" href="${esc(PUBLICATION_URI)}">` : '',

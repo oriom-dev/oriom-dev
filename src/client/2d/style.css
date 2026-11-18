@@ -1,49 +1,29 @@
-/* 2D: a plane you scroll in every direction. The top page is a card; the works spread out
-   beside it as a DAG in time order. */
-:root{--card:min(40rem,calc(100vw - 2.5rem));--grid:color-mix(in oklch,var(--line) 35%,transparent)}
-/* the plane scrolls inside .space, not the document: the page stays exactly as wide
-   as the screen, so phones do not zoom out and fixed layers stay put */
-html,body{height:100%;overflow:hidden}
-body{font-weight:300}
-.space{position:fixed;inset:0;overflow:auto;overscroll-behavior:contain;background-image:radial-gradient(circle,var(--grid) 1px,transparent 1.6px);background-size:28px 28px;background-attachment:local;cursor:grab}
-body.panning{cursor:grabbing;user-select:none}
-.bar{position:fixed;inset:0 0 auto 0;z-index:5;display:flex;flex-wrap:wrap;align-items:baseline;gap:.25rem 1.25rem;padding:.6rem 1.25rem;background:color-mix(in oklch,var(--bg) 88%,transparent);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-bottom:1px solid var(--grid)}
-.bar .name{font-weight:400;letter-spacing:.2em;text-decoration:none}
-.bar nav{display:flex;gap:1rem;flex-wrap:wrap}
-.bar a{text-decoration:none}
-.tomap{margin-left:auto;color:var(--muted)}
-.plane{position:relative;display:grid;grid-template-columns:var(--card) max-content;align-items:start;gap:clamp(2rem,8vw,7rem);padding:clamp(5.5rem,12vw,7rem) 1.25rem 6rem;width:max-content}
-.card{width:var(--card);background:var(--bg);border:1px solid var(--line);border-radius:18px;padding:clamp(1.25rem,4vw,2.5rem);box-shadow:0 1px 0 var(--grid);cursor:auto;position:relative;z-index:1}
-.card>:first-child{margin-top:0}
-.card h1{font-weight:300;font-size:clamp(1.6rem,6vw,2.4rem);line-height:1.3}
-.card h2{font-weight:400;font-size:1.25rem;margin-top:2.5rem;border-bottom:1px solid var(--grid);padding-bottom:.35rem}
-.card th{font-weight:400;color:var(--muted)}.card th,.card td:first-child{white-space:nowrap}
-.card blockquote{margin-inline:0;padding-left:1rem;border-left:2px solid var(--line);color:var(--muted)}
-.card figure.art{margin:1.5rem 0}.card figure.art svg{display:block;width:100%;height:auto;overflow:visible}
-.card figure.art path{fill:none;stroke:var(--line);stroke-width:1.5;vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}
-.card figure.hero{max-width:16rem;margin-inline:auto}
-.card .works{list-style:none;padding:0;display:grid;gap:.75rem}
-.card .works a{display:grid;grid-template-columns:3.5rem 1fr auto;column-gap:1rem;padding:.75rem;border:1px solid var(--grid);border-radius:12px;text-decoration:none}
-.card .works a:hover{border-color:var(--line)}
-.card .works figure{grid-row:1/4;margin:0}.card .works b{font-weight:500}.card .works time{color:var(--muted);font-size:.85em}
-.card .works span,.card .works small{grid-column:2/4;font-size:.9em}.card .works small{color:var(--muted)}
-.end{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--grid);color:var(--muted);font-size:.85em}
-.map{position:relative}
-.edges{position:absolute;inset:0;overflow:visible}
-.edges path{fill:none;stroke:var(--line);stroke-width:1.25;opacity:.55;transition:opacity .2s,stroke-width .2s}
-.edges text{font-size:11px;fill:var(--muted);text-anchor:middle;paint-order:stroke;stroke:var(--bg);stroke-width:4px;stroke-linejoin:round;opacity:.8}
-.edges g.on path{opacity:1;stroke-width:2.5}.edges g.on text{fill:var(--fg);opacity:1}
-.year{position:absolute;top:24px;font-size:2.25rem;font-weight:200;color:var(--muted);letter-spacing:.1em}
-.node{position:absolute;width:248px;height:168px;display:flex;flex-direction:column;justify-content:flex-end;gap:.15rem;padding:.75rem 1rem;background:var(--bg);border:1px solid var(--line);border-radius:14px;text-decoration:none;cursor:pointer;transition:transform .2s}
-.node:hover,.node:focus-visible{transform:translateY(-2px)}
-.node figure{flex:1;min-height:0;margin:0 0 .25rem;display:flex;justify-content:center}
-.node figure svg{width:auto;height:100%;max-width:100%}
-.node b{font-weight:500;line-height:1.3}.node small{color:var(--muted)}
-.node.here{outline:3px solid var(--line);outline-offset:3px}
-.link{position:absolute;inset:0;overflow:visible;pointer-events:none;fill:none;stroke:var(--line);stroke-width:1.5;stroke-dasharray:6 6}
-.card .comments ul{list-style:none;padding:0;margin:0}
-.card .comments ul ul{padding-left:1rem;margin-left:.25rem;border-left:1px solid var(--line)}
-.card .comments li{margin:.75rem 0}
-.card .comments .who{margin:0;font-size:.85em;color:var(--muted)}.card .comments .who b{font-weight:500;color:var(--fg)}
-.card .comments p{margin:0}
-.node figure.art path{fill:none;stroke:var(--line);stroke-width:1.5;vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}
+/* 2D: a column per year (newest on the left), works, posts and badges as cards in it;
+   a card opens its page in the popup. */
+:root{--grid:color-mix(in oklch,var(--line) 30%,transparent);--colw:min(21rem,calc(100vw - 3rem));--side:max(1rem,calc((100vw - 72rem)/2))}
+body{font-weight:300;background-image:radial-gradient(circle,var(--grid) 1px,transparent 1.6px);background-size:28px 28px;background-attachment:fixed}
+.bar{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;align-items:baseline;gap:.25rem 1.25rem;padding:.6rem var(--side);background:color-mix(in oklch,var(--bg) 88%,transparent);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-bottom:1px solid var(--grid)}
+.bar nav{display:flex;gap:1rem;flex-wrap:wrap}.bar a{text-decoration:none}
+.bar dl.stats{margin:0 0 0 auto;display:block}.bar dl.stats div{flex-direction:row;gap:.4rem;align-items:baseline}.bar dl.stats dd{font-size:1em}
+.cards{padding:2.5rem 0 4rem}
+.cards>h1,.cards>ul,.cards>.end{margin-left:var(--side);margin-right:var(--side)}
+.cards>h1{font-weight:200;font-size:clamp(1.8rem,7vw,2.6rem);letter-spacing:.04em;margin-top:0;margin-bottom:1rem}
+.cards .links{list-style:none;padding:0;display:flex;flex-wrap:wrap;gap:.5rem 1.5rem;margin-top:0;margin-bottom:1rem}.cards .links a{text-decoration:none}.cards .links span{color:var(--muted)}
+.years{display:grid;grid-auto-flow:column;grid-auto-columns:var(--colw);gap:1.25rem;overflow-x:auto;padding:.5rem var(--side) 1.5rem;scroll-snap-type:x mandatory;scroll-padding:0 var(--side);overscroll-behavior-x:contain}
+.year{scroll-snap-align:start}
+.year h2{margin:0 0 .5rem;line-height:1.2;font-weight:200;font-size:2rem;letter-spacing:.1em;color:var(--muted)}
+.year ul{list-style:none;padding:0;margin:0;display:grid;gap:.75rem}
+.year a{display:grid;grid-template-columns:3.5rem 1fr;column-gap:1rem;row-gap:.2rem;align-items:start;padding:.9rem 1rem;background:var(--bg);border:1px solid var(--line);border-radius:14px;text-decoration:none;transition:transform .15s}
+.year a:hover{transform:translateY(-2px)}
+.year figure{grid-row:1/6;margin:.15rem 0 0;display:flex;justify-content:center}
+.year figure svg{display:block;width:100%;height:auto;max-height:4rem;overflow:visible}
+.year figure path{fill:none;stroke:var(--line);stroke-width:1.5;vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}
+.year b{font-weight:500;grid-column:2}
+.year span,.year small,.year dl.stats,.year .tags{grid-column:2}
+.year span{font-size:.9em}.year small{color:var(--muted);font-size:.85em}
+.year li.post a{grid-template-columns:1fr}.year li.post b,.year li.post span,.year li.post small{grid-column:1}
+.year dl.stats{margin:0;display:block;font-size:.9em}.year dl.stats div{flex-direction:row;gap:.4rem;align-items:baseline}.year dl.stats dt{color:var(--muted)}.year dl.stats dd{font-size:1em}
+.year .tags{list-style:none;padding:0;margin:.35rem 0 0;display:flex;flex-wrap:wrap;gap:.3rem}
+.year .tags li{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:.72em;padding:.05rem .4rem;border:1px solid var(--grid);border-radius:4px;color:var(--muted)}
+.end{padding-top:1rem;border-top:1px solid var(--grid);color:var(--muted);font-size:.85em;display:flex;gap:1rem}
+body .cards>h1+ul{margin:0 var(--side) 1rem}
