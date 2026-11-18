@@ -25,8 +25,6 @@ const AUTO_FETCH = [
   /<(?:img|script|iframe|video|audio|source|embed|input)\b[^>]*\ssrcset?=["']?(?!data:)/i,
   /<link\b(?=[^>]*\brel=["']?(?:stylesheet|icon|preload|modulepreload|manifest|apple-touch-icon|prefetch)\b)(?![^>]*\bhref=["']?data:)[^>]*>/i,
   /<object\b[^>]*\sdata=["']?(?!data:)/i,
-  /url\(\s*["']?(?!data:|#)/i,
-  /@import\b/i,
   /<video\b[^>]*\sposter=/i,
 ];
 
@@ -37,6 +35,9 @@ for (const [path, page] of Object.entries(site.pages)) {
       const size = Buffer.byteLength(html);
       assert.ok(size <= LIMIT, `${v} is ${size} bytes`);
       for (const re of AUTO_FETCH) assert.doesNotMatch(html, re, `${v} would make a second request`);
+      // CSS only (scripts may well say "toDataURL("): <style> blocks and style attributes
+      const css = [...html.matchAll(/<style>([\s\S]*?)<\/style>|\sstyle="([^"]*)"/g)].map((m) => m[1] ?? m[2]).join('\n');
+      assert.doesNotMatch(css, /url\(\s*["']?(?!data:|#)|@import\b/i, `${v} CSS would make a second request`);
       assert.doesNotMatch(html, /<!--@|__HUE__/, `${v} has an unfilled slot`);
     }
     const md = composeMd(page, stats);
