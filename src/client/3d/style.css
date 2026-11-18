@@ -23,7 +23,7 @@ html.world:not(.popped) .tip:not(:empty){display:block;position:fixed;left:50%;t
 .status{position:fixed;left:0;right:0;bottom:0;z-index:3;display:flex;align-items:center;gap:1rem;padding:.5rem 1rem;background:color-mix(in oklch,var(--bg) 82%,transparent);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-top:1px solid color-mix(in oklch,var(--line) 40%,transparent);font-size:.85em;color:var(--muted)}
 html:not(.world) .status{display:none}
 .compass{display:flex;align-items:center;gap:.4rem;color:var(--fg);min-width:4.5rem}
-.compass i{display:inline-block;font-style:normal;transition:transform .1s linear}
+.compass svg{width:1.1rem;height:1.1rem;fill:var(--fg)}
 .compass b{font-weight:400}
 .keys{display:flex;flex-wrap:wrap;gap:.3rem 1rem;overflow:hidden;flex:1}
 .keys span{display:inline-flex;align-items:center;gap:.3rem;white-space:nowrap}.keys kbd+kbd{margin-left:-.15rem}

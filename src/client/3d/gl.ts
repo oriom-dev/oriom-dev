@@ -79,6 +79,10 @@ export function webgl2(canvas: HTMLCanvasElement): Renderer | null {
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
       panels.set(id, { o: vao(quad.buffer as ArrayBuffer, true), t });
     },
+    dropPanel(id) {
+      const p = panels.get(id);
+      if (p) { free(p.o); gl.deleteTexture(p.t); panels.delete(id); }
+    },
     render(u, visible) {
       gl.bindBuffer(gl.UNIFORM_BUFFER, ubo);
       gl.bufferSubData(gl.UNIFORM_BUFFER, 0, u, 0, UNIFORM_FLOATS);

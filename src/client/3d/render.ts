@@ -7,6 +7,7 @@ export interface Renderer {
   dropChunk(key: string): void;
   /** A textured quad: 4 vertices of x, y, z, u, v. */
   setPanel(id: number, quad: Float32Array, image: HTMLCanvasElement): void;
+  dropPanel(id: number): void;
   render(uniforms: Float32Array, visible: (cx: number, cz: number) => boolean): void;
 }
 

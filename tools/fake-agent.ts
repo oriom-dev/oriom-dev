@@ -1,17 +1,21 @@
 // A stand-in for the cluster dashboard agent (/v1/cluster on a Unix socket), for seeing
 // the header meters, the cluster popup and the 3D lamps without the real cluster:
-//   node tools/fake-agent.ts /tmp/agent.sock &
+//   [FAKE_NODES=3] node tools/fake-agent.ts /tmp/agent.sock &
 //   CLUSTER_AGENT_SOCKET=/tmp/agent.sock npm run dev
 import http from 'node:http';
 import { rmSync } from 'node:fs';
 
 const sock = process.argv[2] ?? '/tmp/oriom-fake-agent.sock';
 rmSync(sock, { force: true });
-let busy = [0, 0], total = [0, 0], rx = [0, 0];
+let busy: number[] = [], total: number[] = [], rx: number[] = [];
+// FAKE_NODES=3 adds more nodes, to see the 3D lamp rows follow the cluster
 const nodes = [
   { name: 'kagoya-vps', cpus: 3, mem: 3_000_000_000, load: 0.55, used: 0.62 },
   { name: 'home-desktop', cpus: 16, mem: 32_000_000_000, load: 0.18, used: 0.35 },
-];
+  { name: 'lab-server', cpus: 64, mem: 256_000_000_000, load: 0.8, used: 0.7 },
+  { name: 'raspberry-pi', cpus: 4, mem: 8_000_000_000, load: 0.3, used: 0.5 },
+].slice(0, Number(process.env.FAKE_NODES ?? 2));
+busy = nodes.map(() => 0); total = nodes.map(() => 0); rx = nodes.map(() => 0);
 http.createServer((_, res) => {
   const now = Date.now() / 1000;
   const out = nodes.map((n, i) => {

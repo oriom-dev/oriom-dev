@@ -99,15 +99,16 @@ seq.forEach((it, k) => {
 // redstone lamps on the floor between the spawn and the title sign: one row per node
 // for CPU and one for memory, ten lamps each. A note under the title sign points down
 // at them, and a board on the floor at the left end of each row says what it shows.
-const LAMP_X0 = -4, LAMP_Z0 = -2;
-sign({ canvas: textCanvas('↓ 今のサーバーのリソース', 768, 96, 52), label: '', center: [0.5, PLAZA_Y + 1.32, -5], normal: [0, 0, 1], w: 4, h: 0.5, offset: 0.12 });
-const rowBoards: { id: number; quad: Float32Array; canvas: HTMLCanvasElement }[] = [];
-for (let row = 0; row < 4; row++) {
-  rowBoards.push({ id: 1000 + row, quad: floorQuad(LAMP_X0 - 1.75, PLAZA_Y + 1.02, LAMP_Z0 + row + 0.5, 3.3, 0.8), canvas: textCanvas('') });
-}
-const rowText = (s: Stats | null, row: number) => {
-  const n = s?.cluster?.nodes?.[row >> 1];
-  return n ? `${n.name} ${row % 2 ? 'メモリ' : 'CPU'}` : '';
+// The rows follow the cluster: as many nodes as it has (two rows each), added and taken
+// away as nodes come and go.
+const LAMP_X0 = -4, LAMP_Z0 = -2, MAX_NODES = 6;
+const FLOOR = PLAZA_Y + 1.02;
+const notePanel = { id: 999, quad: floorQuad(0.5, FLOOR, -3.2, 4.4, 0.8), canvas: textCanvas('↓ 今のサーバーのリソース', 768, 128, 60) };
+let lampRows = 0; // rows currently on the floor
+const lampChunks = (rows: number) => {
+  const keys = new Set<string>();
+  for (const x of [LAMP_X0, LAMP_X0 + 9]) for (const z of [LAMP_Z0, LAMP_Z0 + Math.max(0, rows - 1)]) keys.add(`${Math.floor(x / CS)},${Math.floor(z / CS)}`);
+  return keys;
 };
 
 const FOVY = 1.15;
@@ -146,22 +147,24 @@ function applyStats(s: Stats | null): void {
   if (!s) return;
   const statText = (k?: string) =>
     k === 'tompedia' && s.tompedia ? `利用者 ${nf.format(s.tompedia.total)} 人` : k === 'mosimo' && s.mosimo ? `投稿 ${nf.format(s.mosimo.posts)} 件` : '';
-  const nodes = (s.cluster?.nodes ?? []).slice(0, 2);
-  for (let i = 0; i < 2; i++) {
-    const n = nodes[i];
-    const cpu = n?.cpu ?? 0, mem = n ? (100 * n.memory.used) / n.memory.total : 0;
+  const nodes = (s.cluster?.nodes ?? []).slice(0, MAX_NODES);
+  const rows = nodes.length * 2;
+  for (let row = 0; row < Math.max(rows, lampRows); row++) {
+    const n = nodes[row >> 1];
+    const v = n ? (row % 2 ? (100 * n.memory.used) / n.memory.total : n.cpu ?? 0) : 0;
+    const z = LAMP_Z0 + row;
     for (let k = 0; k < 10; k++) {
-      world.overrides.set(`${LAMP_X0 + k},${PLAZA_Y},${LAMP_Z0 + i * 2}`, n && cpu > k * 10 + 1 ? B.LampOn : B.LampOff);
-      world.overrides.set(`${LAMP_X0 + k},${PLAZA_Y},${LAMP_Z0 + i * 2 + 1}`, n && mem > k * 10 + 1 ? B.LampOn : B.LampOff);
+      const key = `${LAMP_X0 + k},${PLAZA_Y},${z}`;
+      if (row < rows) world.overrides.set(key, v > k * 10 + 1 ? B.LampOn : B.LampOff);
+      else world.overrides.delete(key); // a node went away: back to the plaza floor
     }
+    if (row < rows) {
+      renderer?.setPanel(1000 + row, floorQuad(LAMP_X0 - 1.75, FLOOR, z + 0.5, 3.3, 0.8), textCanvas(`${n!.name} ${row % 2 ? 'メモリ' : 'CPU'}`, 512, 124, 46));
+    } else renderer?.dropPanel(1000 + row);
   }
+  const touched = lampChunks(Math.max(rows, lampRows));
+  lampRows = rows;
   titleSign.canvas = cardCanvas(card, s.views != null ? `訪問 ${nf.format(s.views)}` : '');
-  rowBoards.forEach((b, row) => {
-    const t = rowText(s, row);
-    if (!t) return;
-    b.canvas = textCanvas(t, 512, 124, 46);
-    renderer?.setPanel(b.id, b.quad, b.canvas);
-  });
   items.forEach((it, i) => {
     if (!it.stat) return;
     const sg = itemSigns[i]!;
@@ -170,7 +173,7 @@ function applyStats(s: Stats | null): void {
   });
   if (renderer) {
     renderer.setPanel(titleSign.id, titleSign.quad, titleSign.canvas);
-    for (const key of ['-1,-1', '0,-1', '-1,0', '0,0']) if (loaded.has(key)) dirty.add(key);
+    for (const key of touched) if (loaded.has(key)) dirty.add(key);
   }
 }
 
@@ -217,10 +220,12 @@ const DUSK = srgb(0.72, 0.13, 45);
 const SYNODIC = 29.530588853; // days
 const NEW_MOON = Date.UTC(2000, 0, 6, 18, 14); // a known new moon
 
-// ?debug&at=2026-11-20T23:00 shows the sky of another moment (to check the moon)
-const at = new URLSearchParams(location.search).has('debug') ? new URLSearchParams(location.search).get('at') : null;
+// ?at=2026-11-24T23:00 shows the sky of another moment (sun, moon phase, stars); an
+// invalid value is ignored and the visitor's own time is used
+const atParam = new URLSearchParams(location.search).get('at');
+const atTime = atParam && !Number.isNaN(Date.parse(atParam)) ? Date.parse(atParam) : null;
 function sky() {
-  const d = at ? new Date(at) : new Date();
+  const d = atTime !== null ? new Date(atTime) : new Date();
   const hours = d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600;
   const a = ((hours - 6) / 24) * Math.PI * 2; // sunrise in the east (+x) at 6:00
   // sun and moon share one great circle, tilted towards the south (+z)
@@ -241,14 +246,14 @@ const joy = { x: 0, y: 0, id: -1, ox: 0, oy: 0 };
 let look: { id: number; x: number; y: number; moved: number } | null = null;
 let jumpHeld = false;
 
-const MOVE = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 const locked = () => document.pointerLockElement === canvas;
+const lockMouse = () => { if (!popped()) canvas.requestPointerLock?.()?.catch?.(() => {}); };
 const keysText = $('keys');
 const K = (keys: string[], what: string) => `<span>${keys.map((k) => `<kbd>${k}</kbd>`).join('')}${what}</span>`;
 const setKeys = () => {
   keysText.innerHTML = locked()
-    ? [K(['W', 'A', 'S', 'D'], '歩く'), K(['マウス'], '見回す'), K(['Space'], 'ジャンプ'), K(['クリック'], '開く'), K(['Esc'], 'マウスを解放')].join('')
-    : [K(['W', 'A', 'S', 'D'], '歩く・マウスで見回す'), K(['ドラッグ'], '見回す'), K(['Space'], 'ジャンプ'), K(['クリック'], '開く')].join('');
+    ? [K(['W', 'A', 'S', 'D'], '歩く'), K(['マウス'], '見回す'), K(['Space'], 'ジャンプ'), K(['クリック'], '看板を開く'), K(['Esc'], 'マウスを解放')].join('')
+    : [K(['クリック'], '見回す・看板を開く'), K(['W', 'A', 'S', 'D'], '歩く'), K(['Space'], 'ジャンプ')].join('');
 };
 setKeys();
 document.addEventListener('pointerlockchange', setKeys);
@@ -256,7 +261,8 @@ document.addEventListener('pointerlockchange', setKeys);
 document.addEventListener('keydown', (e) => {
   if (popped() || !root.classList.contains('world') || e.altKey || e.ctrlKey || e.metaKey) return;
   if ((e.target as Element).closest?.('a,button,input,textarea')) return;
-  if (MOVE.has(e.code) && !locked() && !mobile) canvas.requestPointerLock?.()?.catch?.(() => {});
+  // any key of the world (not Esc, Tab or the browser's own) hands the mouse to the view
+  if (!locked() && !mobile && !/^(Escape|Tab|F\d+|Meta|Alt|Control|Shift|OS)/.test(e.code)) lockMouse();
   keys.add(e.code);
   if (e.code === 'KeyN') toggleNight();
   if (e.code === 'Enter' || e.code === 'KeyE') activate(aimed());
@@ -273,6 +279,8 @@ document.addEventListener('mousemove', (e) => {
 });
 canvas.addEventListener('pointerdown', (e) => {
   if (locked()) { if (e.button === 0) activate(aimed()); return; } // the crosshair picks
+  // a click on a sign opens it (on release); any other click hands the mouse to the view
+  if (e.pointerType === 'mouse' && !aimed(e.clientX, e.clientY)) { lockMouse(); return; }
   canvas.setPointerCapture(e.pointerId);
   if (e.pointerType === 'mouse') { if (e.button === 0) look = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: 0 }; return; }
   if (e.clientX < innerWidth / 2 && joy.id < 0) { joy.id = e.pointerId; joy.ox = e.clientX; joy.oy = e.clientY; }
@@ -314,14 +322,15 @@ function toggleNight(): void {
 nvButton.addEventListener('click', () => { toggleNight(); canvas.focus({ preventScroll: true }); });
 
 // ---------------------------------------------------------------- compass
-const DIRS = ['北', '北東', '東', '南東', '南', '南西', '西', '北西'];
+const DIRS = ['北', '北北東', '北東', '東北東', '東', '東南東', '南東', '南南東', '南', '南南西', '南西', '西南西', '西', '西北西', '北西', '北北西'];
 const needle = $('needle'), heading = $('heading');
 let lastDir = -1;
-/** North is -z (behind the title sign), east is +x (where the sun rises). */
+/** North is -z (behind the title sign), east is +x (where the sun rises). The arrowhead
+ *  always points north; the text says which way you face, in 16 points. */
 function compass(yaw: number): void {
   const deg = (((-yaw * 180) / Math.PI) % 360 + 360) % 360;
   needle.style.transform = `rotate(${-deg}deg)`;
-  const d = Math.round(deg / 45) % 8;
+  const d = Math.round(deg / 22.5) % 16;
   if (d !== lastDir) { heading.textContent = DIRS[d]!; lastDir = d; }
 }
 
@@ -373,6 +382,7 @@ async function start(): Promise<void> {
   canvas.focus({ preventScroll: true });
   const r = renderer;
   for (const s of signs) r.setPanel(s.id, s.quad, s.canvas);
+  r.setPanel(notePanel.id, notePanel.quad, notePanel.canvas);
   // HTML-in-Canvas: when available the big sign shows the live DOM itself
   htmlCanvas(card, (cv) => r.setPanel(titleSign.id, titleSign.quad, cv));
   applyStats(readStats());

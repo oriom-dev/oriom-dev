@@ -93,6 +93,10 @@ export async function webgpu(canvas: HTMLCanvasElement): Promise<Renderer | null
       const bg = device.createBindGroup({ layout: g1, entries: [{ binding: 0, resource: sampler }, { binding: 1, resource: tex.createView() }] });
       panels.set(id, { vb, bg, tex });
     },
+    dropPanel(id) {
+      const p = panels.get(id);
+      if (p) { p.vb.destroy(); p.tex.destroy(); panels.delete(id); }
+    },
     render(u, visible) {
       device.queue.writeBuffer(ubuf, 0, u.buffer, u.byteOffset, UNIFORM_FLOATS * 4);
       const enc = device.createCommandEncoder();
