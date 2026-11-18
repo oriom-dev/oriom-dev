@@ -4,22 +4,24 @@
 
 **Web・モバイル・バックエンド・クラウド・セキュリティ、ときどき量子アニーリング**
 
-東北大学 工学部 電気情報物理工学科 4 年 · 微小光学研究室 · [一般社団法人とんペディア](https://org.tompedia.jp/) 理事 · [Team JISAKU](https://jisaku.dev)
+東北大学 工学部 電気情報物理工学科 4 年 · 微小光学研究室 · [一般社団法人とんペディア](https://org.tompedia.jp/) 理事（開発担当） · [Team JISAKU](https://jisaku.dev)
 
 [![oriom.dev](https://img.shields.io/badge/oriom.dev-portfolio-000?style=flat-square)](https://oriom.dev)
 [![Bluesky](https://img.shields.io/badge/Bluesky-@oriom.dev-0285FF?style=flat-square&logo=bluesky&logoColor=white)](https://bsky.app/profile/oriom.dev)
-[![Team JISAKU](https://img.shields.io/badge/Team-JISAKU-555?style=flat-square)](https://jisaku.dev/)
+[![Team JISAKU](https://img.shields.io/badge/Team-JISAKU-555?style=flat-square)](https://jisaku.dev)
 
 </div>
 
-> [!NOTE]
-> このページは [oriom.dev](https://oriom.dev) と同じ内容を GitHub 向けにまとめたものです。サイトはアクセスするたびに **1 次元・2 次元・3 次元** のどれかのデザインで表示されます。末尾に `.md` を付けると Markdown 版を読めます。
+研究では 3D Gaussian Splatting を、課外では量子アニーリングを触っています。作るものに合わせて、フロントエンドから組込、インフラまでどこからでも手を動かします。
+
+> [!TIP]
+> 実績や記事は [oriom.dev](https://oriom.dev) にもまとめています。
 
 ## 🏆 実績
 
 | | プロジェクト | 担当 | 技術 |
 |---|---|---|---|
-| 📡 | **[Mosimo Protocol](https://mosimo.jisaku.dev/)**<br><sub>JPHACKS 2026 Best Audience Award ほか 7 賞</sub> | プロトコル設計・組込・バックエンド | TypeScript · Nix · C++ · AT Protocol · Nostr |
+| 📡 | **[Mosimo Protocol](https://mosimo.jisaku.dev/)**<br><sub>JPHACKS 2026 Best Audience Award ほか</sub> | プロトコル設計・組込・バックエンド | TypeScript · Nix · C++ · AT Protocol · Nostr |
 | 🐷 | **[とんペディア](https://info.tompedia.jp/)**<br><sub>東北大生のための非公式アプリ</sub> | 開発リーダー・立ち上げ・設計・アプリ・バックエンド | Flutter · Next.js · Supabase · Cloudflare |
 | 🧊 | **[Kytos Orchestration](https://altema.is.tohoku.ac.jp/q_universe/apps/158/)**<br><sub>Quantum Infinity for You 表彰</sub> | 設計・バックエンド・SA | Nuxt · Cloudflare · 量子アニーリング |
 | ⛰️ | **[Q-Sherpa](https://altema.is.tohoku.ac.jp/q_universe/apps/156/)**<br><sub>Quantum Infinity for You 表彰</sub> | バックエンド・SA・ホスティング | Next.js · Cloudflare |
@@ -29,12 +31,14 @@
 | ⚖️ | **[ドイツ相続法情報室](https://erb.tchiba.info/)** | Web サイト開発 | Astro · Netlify |
 | 🏢 | **[株式会社リンクエム](https://www.linkm0403.com/)** | リファクタリング・ホスティング | Astro · Cloudflare |
 | 🔍 | **[LENS](https://github.com/Lens-expand-your-horizons/LENS)**<br><sub>東北大学ビジネスアイデアコンテスト enspace 賞</sub> | 設計・Web アプリ・バックエンド | Nuxt · AWS Lambda |
+| 🎭 | **国高祭の運営システムとライブ配信**<br><sub>都立国立高校 文化祭（2021 年度）</sub> | 予約・抽選・入場管理システムの構築と運用、体育館全体のライブ配信 | PHP · JavaScript · nginx · OBS |
 
 <details>
 <summary><b>🗓️ 年表</b></summary>
 
 ```mermaid
 timeline
+    2021 : 国高祭の運営システムとライブ配信
     2023 : LENS（enspace 賞）
          : とんペディア 発足
     2024 : とんペディア Web 版
@@ -49,81 +53,35 @@ timeline
 
 </details>
 
+## 🏅 バッジ
+
+| バッジ | 発行者 | 発行日 |
+|---|---|---|
+| [数理・情報・データサイエンス・AI リテラシー](https://www.openbadge-global.com/api/v1.0/openBadge/v2/Wallet/Public/GetAssertionShare/WDBZTDR3Zm40VlhRc3F0NmFMM1R6dz09) | 東北大学 | 2023-08-23 |
+| [Quantum Business for you（量子コンピュータ実践的スタートアップ創出講座）](https://www.openbadge-global.com/api/v1.0/openBadge/v2/Wallet/Public/GetAssertionShare/M1pLTDNESFVBR2JGWFJWK0pMZSszZz09) | 東北大学大学院情報科学研究科 | 2024-10-01 |
+
 ## 🛠️ 技術
 
 <p>
 <img alt="TypeScript" src="https://img.shields.io/badge/-TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white">
 <img alt="Rust" src="https://img.shields.io/badge/-Rust-000?style=flat-square&logo=rust&logoColor=white">
-<img alt="Dart" src="https://img.shields.io/badge/-Flutter-02569B?style=flat-square&logo=flutter&logoColor=white">
+<img alt="Flutter" src="https://img.shields.io/badge/-Flutter-02569B?style=flat-square&logo=flutter&logoColor=white">
 <img alt="Kotlin" src="https://img.shields.io/badge/-Kotlin-7F52FF?style=flat-square&logo=kotlin&logoColor=white">
 <img alt="Vue.js" src="https://img.shields.io/badge/-Vue.js-4FC08D?style=flat-square&logo=vuedotjs&logoColor=white">
 <img alt="Svelte" src="https://img.shields.io/badge/-Svelte-FF3E00?style=flat-square&logo=svelte&logoColor=white">
+<img alt="PHP" src="https://img.shields.io/badge/-PHP-777BB4?style=flat-square&logo=php&logoColor=white">
 <img alt="Nix" src="https://img.shields.io/badge/-Nix-5277C3?style=flat-square&logo=nixos&logoColor=white">
 <img alt="Cloudflare" src="https://img.shields.io/badge/-Cloudflare-F38020?style=flat-square&logo=cloudflare&logoColor=white">
 <img alt="PostgreSQL" src="https://img.shields.io/badge/-PostgreSQL-4169E1?style=flat-square&logo=postgresql&logoColor=white">
-<img alt="Bluesky" src="https://img.shields.io/badge/-AT_Protocol-0285FF?style=flat-square&logo=bluesky&logoColor=white">
+<img alt="AT Protocol" src="https://img.shields.io/badge/-AT_Protocol-0285FF?style=flat-square&logo=bluesky&logoColor=white">
 </p>
 
-## 🌐 oriom.dev の作り
-
-アクセスするたびに、3 つのデザインのどれかがランダムな色相で返ってきます。
-
-| 1 次元 | 2 次元 | 3 次元 |
-|:---:|:---:|:---:|
-| <img src=".github/screenshots/1d.webp" alt="1 次元：文字以外がすべて 1 本のベジェ曲線でつながったページ" width="100%"> | <img src=".github/screenshots/2d.webp" alt="2 次元：本文のカードの横に実績の DAG が広がる平面" width="100%"> | <img src=".github/screenshots/3d.webp" alt="3 次元：看板が並ぶ広場のあるブロックの世界" width="100%"> |
-| 細い文字と、余白を流れる **1 本の線**。見出しの下線も、箇条書きの点も、実績の線画も、接線のつながった同じ線。文字の上は決して横切らない | 実績を**時間順の DAG** にして平面に広げ、同じ技術でつながる実績を線で結ぶ。上下左右にスクロールやドラッグで眺める | ノイズから生まれる**無限のブロックの世界**を、開いた瞬間から歩ける。スポーンの広場は固定、遠くは毎回違う。空は利用者の時刻、地面のランプはクラスタの CPU |
-
 <details>
-<summary><b>🧪 どの環境でも読めるように</b></summary>
+<summary><b>🧪 研究・興味</b></summary>
 
-| クライアント | 返るもの |
-|---|---|
-| ブラウザ | 3 つのデザインのどれか。WebGPU も WebGL 2 もないと分かれば 3 次元は選ばれない |
-| JavaScript なし | どのデザインも本文だけで完結（3 次元は本文のリーダーが開いた状態） |
-| `curl` / テキストブラウザ / クローラー | 1 次元か 2 次元 |
-| `Accept: text/markdown`、URL 末尾に `.md` | Markdown |
-| `printf 'GET /\r\n' \| nc oriom.dev 80` | HTTP/0.9（ヘッダーなしの本文） |
-| `coap-client coap://oriom.dev/` | CoAP（Markdown、Block2 分割、`/api/stats` は Observe） |
-| `printf '/\r\n' \| nc oriom.dev 70` | Gopher（トップと実績・記事はメニュー、各ページはテキスト） |
-| `gemini://oriom.dev/` | Gemini（gemtext、証明書は TOFU） |
-| オフライン | Service Worker が同じ合成関数でページを組み立てる |
+- 3D Gaussian Splatting（微小光学研究室）
+- 量子アニーリング・シミュレーテッドアニーリングによる組合せ最適化（コンテナ配置、マッチング、班分け）
+- 災害時の端末間通信（store / carry / forward、AT Protocol と Nostr）
+- 自宅と VPS をつないだ Podman クラスタの運用
 
 </details>
-
-```mermaid
-flowchart LR
-    md[content/*.md] --> build[build: テンプレート + ページ]
-    build --> server[Node.js サーバー]
-    server -->|HTTP/1.0–3| caddy[Caddy]
-    server -->|HTTP/0.9| l4[caddy-l4]
-    server -->|CoAP| udp[(UDP 5683)]
-    server -->|Gopher / Gemini| tcp[(TCP 70 / 1965)]
-    build --> sw[Service Worker]
-    sw -.->|オフラインでも同じ合成| browser((ブラウザ))
-    caddy --> browser
-    posts[記事] -->|site.standard.document| pds[(AT Protocol PDS)]
-```
-
-- **1 リクエスト・512 KB 以内**：どのページ、どのデザインも、画像やスクリプトを含めて HTML 1 枚に収まります（テストで常に検査）。
-- **毎回違う色**：OKLCH の明度と彩度を全色相で検証済みの値に固定し、色相だけをランダムにしています。どの色でも文字のコントラストは 7:1 以上です。
-- **standard.site**：記事は AT Protocol のレコードとしても公開し、Team JISAKU の記事もこのサイトから読めます。
-- **コメントは Bluesky で**：記事ごとの告知投稿への返信が、そのままコメント欄になります（`bskyPostRef`）。
-
-### 進捗
-
-- [x] コンテンツのパイプライン（Markdown → テンプレート × ページ、`.md` 版）
-- [x] 全色相で検証した OKLCH パレット
-- [x] 512 KB・1 リクエストの自動検査
-- [x] 1 次元デザイン（一筆書きのベジェ曲線）
-- [x] 2 次元デザイン（技術の DAG を自由スクロール）
-- [x] 3 次元デザイン（ノイズ生成のボクセル世界・WebGPU / WebGL 2）
-- [x] サーバー（HTTP/0.9–3、CoAP、Gopher、Gemini、ランダム配信、ライブ統計）
-- [x] Bluesky の返信をコメント欄に
-- [x] Service Worker / PWA（完全オフライン）
-- [x] standard.site への公開とチーム記事の集約（公開の実行は未）
-- [ ] Open Badges の検証
-- [ ] VPS へのデプロイ（Nix パッケージ・NixOS モジュール・caddy-l4 の設定までは完了）
-
----
-
-<div align="center"><sub>この README は <a href="https://github.com/oriom-dev/oriom-dev">oriom-dev/oriom-dev</a> のサイトのソースと一緒に管理しています。</sub></div>
