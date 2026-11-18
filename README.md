@@ -66,6 +66,28 @@ timeline
 
 ## 🌐 oriom.dev の作り
 
+アクセスするたびに、3 つのデザインのどれかがランダムな色相で返ってきます。
+
+| 1 次元 | 2 次元 | 3 次元 |
+|:---:|:---:|:---:|
+| <img src=".github/screenshots/1d.webp" alt="1 次元：文字以外がすべて 1 本のベジェ曲線でつながったページ" width="100%"> | <img src=".github/screenshots/2d.webp" alt="2 次元：本文のカードの横に実績の DAG が広がる平面" width="100%"> | <img src=".github/screenshots/3d.webp" alt="3 次元：看板が並ぶ広場のあるブロックの世界" width="100%"> |
+| 細い文字と、余白を流れる **1 本の線**。見出しの下線も、箇条書きの点も、実績の線画も、すべて同じ線。文字の上は決して横切らない | 実績を**時間順の DAG** にして平面に広げ、同じ技術でつながる実績を線で結ぶ。上下左右にスクロールやドラッグで眺める | ノイズから生まれる**無限のブロックの世界**。スポーンの広場は固定、遠くは毎回違う。空は利用者の時刻、地面のランプはクラスタの CPU |
+
+<details>
+<summary><b>🧪 どの環境でも読めるように</b></summary>
+
+| クライアント | 返るもの |
+|---|---|
+| ブラウザ | 3 つのデザインのどれか。WebGPU も WebGL 2 もないと分かれば 3 次元は選ばれない |
+| JavaScript なし | どのデザインも本文だけで完結（3 次元は本文のリーダーが開いた状態） |
+| `curl` / テキストブラウザ / クローラー | 1 次元か 2 次元 |
+| `Accept: text/markdown`、URL 末尾に `.md` | Markdown |
+| `printf 'GET /\r\n' \| nc oriom.dev 80` | HTTP/0.9（ヘッダーなしの本文） |
+| `coap-client coap://oriom.dev/` | CoAP（Markdown、Block2 分割、`/api/stats` は Observe） |
+| オフライン | Service Worker が同じ合成関数でページを組み立てる |
+
+</details>
+
 ```mermaid
 flowchart LR
     md[content/*.md] --> build[build: テンプレート + ページ]
@@ -95,7 +117,7 @@ flowchart LR
 - [x] Service Worker / PWA（完全オフライン）
 - [x] standard.site への公開とチーム記事の集約（公開の実行は未）
 - [ ] Open Badges の検証
-- [ ] VPS へのデプロイ
+- [ ] VPS へのデプロイ（Nix パッケージ・NixOS モジュール・caddy-l4 の設定までは完了）
 
 ---
 

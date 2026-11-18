@@ -72,8 +72,9 @@ struct PO { @builtin(position) pos: vec4f, @location(0) uv: vec2f, @location(1) 
 @vertex fn panel_vs(@location(0) p: vec3f, @location(1) uv: vec2f) -> PO {
   var o: PO; o.pos = u.vp * vec4f(p, 1.0); o.uv = uv; o.wp = p; return o;
 }
-@fragment fn panel_fs(i: PO) -> @location(0) vec4f {
-  let t = textureSample(pt, ps, i.uv);
+@fragment fn panel_fs(i: PO, @builtin(front_facing) front: bool) -> @location(0) vec4f {
+  var t = textureSample(pt, ps, i.uv);
+  if (!front) { t = vec4f(PAL[11] * (0.9 + 0.2 * hash3(floor(i.wp * 8.0))), 1.0); } // the back of the board
   let l = 0.55 + 0.45 * max(u.light.x * 1.6, u.sun.w);
   return vec4f(mix(t.rgb * l, u.horizon.rgb, (1.0 - exp(-distance(i.wp, u.cam.xyz) * u.zenith.w)) * 0.6), 1.0);
 }
@@ -127,6 +128,6 @@ layout(location=0) in vec3 p; layout(location=1) in vec2 uv; out vec2 v; out vec
 void main() { gl_Position = vp * vec4(p, 1.0); v = uv; wp = p; }`,
   panelFs: `${GLSL_HEAD}
 uniform sampler2D t; in vec2 v; in vec3 wp; out vec4 o;
-void main() { vec4 c = texture(t, v); float l = 0.55 + 0.45 * max(light.x * 1.6, sun.w);
+void main() { vec4 c = gl_FrontFacing ? texture(t, v) : vec4(PAL[11] * (0.9 + 0.2 * hash3(floor(wp * 8.0))), 1.0); float l = 0.55 + 0.45 * max(light.x * 1.6, sun.w);
   o = vec4(mix(c.rgb * l, horizon.rgb, (1.0 - exp(-distance(wp, cam.xyz) * zenith.w)) * 0.6), 1.0); }`,
 };
