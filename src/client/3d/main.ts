@@ -11,7 +11,7 @@ import { webgpu } from './gpu.ts';
 import { ringLayout } from './layout.ts';
 import { forward, invert, mul, perspective, view } from './math.ts';
 import { meshChunk } from './mesh.ts';
-import { cardCanvas, htmlCanvas, labelCanvas, postCanvas, quadAt, type Sign, titleCard, workCanvas } from './panels.ts';
+import { cardCanvas, htmlCanvas, postCanvas, quadAt, type Sign, titleCard, workCanvas } from './panels.ts';
 import { Player } from './player.ts';
 import type { Renderer } from './render.ts';
 import { UNIFORM_FLOATS } from './render.ts';
@@ -90,8 +90,10 @@ const fitDistance = (w: number, top: number) => {
   return Math.max(3.4, across, up);
 };
 const topOf = (s: Sign) => s.center[1]! + s.h / 2;
-// the spawn: the whole title sign in view
-const spanW = titleSign.w;
+// the spawn: the whole title sign in view, and on wide screens the two signs beside it
+// too (whole, not cut off at the edges)
+const besides = signs.slice(1, 3).map((x) => Math.abs(x.center[0]! - titleSign.center[0]!) + x.w / 2);
+const spanW = innerWidth > innerHeight * 1.2 && besides.length ? 2 * Math.max(titleSign.w / 2, ...besides) : titleSign.w;
 player.p = [0.5, PLAZA_Y + 1, titleSign.center[2]! + fitDistance(spanW, topOf(titleSign))];
 
 /** Opened by URL: stand in front of that page's sign (the popup is already open). */
@@ -120,7 +122,7 @@ function applyStats(s: Stats | null): void {
       world.overrides.set(`${LAMP_X0 + k},${PLAZA_Y},${LAMP_Z0 + i * 2 + 1}`, n && mem > k * 10 + 1 ? B.LampOn : B.LampOff);
     }
   }
-  titleSign.canvas = cardCanvas(card, s.views != null ? `${nf.format(s.views)}` : '');
+  titleSign.canvas = cardCanvas(card, s.views != null ? `訪問 ${nf.format(s.views)}` : '');
   items.forEach((it, i) => {
     if (!it.stat) return;
     const sg = signs[i + 1]!; // signs[0] is the title sign

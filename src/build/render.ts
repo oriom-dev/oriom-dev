@@ -1,5 +1,5 @@
 import { Marked } from 'marked';
-import { artAttr, separatePath, type Art } from '../shared/art.ts';
+import { separatePath, type Art } from '../shared/art.ts';
 import { mdPath } from '../shared/routes.ts';
 import type { Badge, Comment, Comments, Item, PageOut, Post, Work } from '../shared/types.ts';
 import { AUTHOR, loadStandard } from './content.ts';
@@ -27,7 +27,7 @@ export const SITE = 'oriom.dev';
 export function figure(a: Art, label: string, cls = ''): string {
   const h = Math.round(1000 / a.aspect);
   const d = separatePath(a);
-  return `<figure class="art${cls && ` ${cls}`}" data-art="${artAttr(a)}" style="aspect-ratio:${a.aspect}" role="img" aria-label="${esc(label)}">`
+  return `<figure class="art${cls && ` ${cls}`}" style="aspect-ratio:${a.aspect}" role="img" aria-label="${esc(label)}">`
     + `<svg viewBox="0 0 1000 ${h}" aria-hidden="true"><path d="${d}"/></svg></figure>`;
 }
 

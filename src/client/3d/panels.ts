@@ -143,22 +143,6 @@ export function postCanvas(it: Item): HTMLCanvasElement {
   return cv;
 }
 
-/** A label: one line of large text. */
-export function labelCanvas(text: string, sub = ''): HTMLCanvasElement {
-  const W = 512, H = 160;
-  const cv = Object.assign(document.createElement('canvas'), { width: W, height: H });
-  const ctx = cv.getContext('2d')!;
-  frame(ctx, W, H);
-  ctx.fillStyle = css('--fg') || '#000';
-  ctx.textBaseline = 'top';
-  ctx.font = `400 40px ${FONT}`;
-  ctx.fillText(text, 32, 30, W - 64);
-  ctx.fillStyle = css('--muted') || '#666';
-  ctx.font = `300 28px ${FONT}`;
-  ctx.fillText(sub, 32, 90, W - 64);
-  return cv;
-}
-
 /**
  * HTML-in-Canvas: when supported, the title card is a real element inside a
  * `<canvas layoutsubtree>` and is painted from the DOM. Returns null when the API is missing.
