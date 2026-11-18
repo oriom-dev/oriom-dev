@@ -1,14 +1,15 @@
 // Where the signs stand. Works and posts fill concentric arcs around the plaza, the
 // nearest arc first; every arc keeps the signs at least SPACING apart and leaves a
-// gap behind the title sign. Each arc is staggered by half a step and raised a little
-// so the inner arcs do not hide the outer ones. More content just adds arcs.
+// gap around the title sign (where the two label signs stand). Odd arcs are staggered
+// by half a step and the arcs are far apart, so inner signs do not hide outer ones;
+// all signs stand on the plaza floor. More content just adds arcs.
 
 export interface Slot { x: number; z: number; y: number; nx: number; nz: number; ring: number }
 
 export const FIRST_RING = 10;
-export const RING_STEP = 5.5;
+export const RING_STEP = 7;
 export const SPACING = 3.6; // sign width 2.4 + a gap
-export const FRONT_GAP = 0.2 * Math.PI; // either side of straight ahead (-z)
+export const FRONT_GAP = 0.3 * Math.PI; // either side of straight ahead (-z)
 
 export function ringLayout(n: number): { slots: Slot[]; plaza: number } {
   const slots: Slot[] = [];
@@ -28,7 +29,7 @@ export function ringLayout(n: number): { slots: Slot[]; plaza: number } {
     // the nearest to straight behind the spawn first, so a half-full arc stays balanced
     angles.sort((a, b) => Math.abs(a - Math.PI) - Math.abs(b - Math.PI));
     for (const ang of angles) {
-      slots.push({ x: -Math.sin(ang) * r, z: -Math.cos(ang) * r, y: ring * 1.2, nx: Math.sin(ang), nz: Math.cos(ang), ring });
+      slots.push({ x: -Math.sin(ang) * r, z: -Math.cos(ang) * r, y: 0, nx: Math.sin(ang), nz: Math.cos(ang), ring });
     }
     ring++;
   }

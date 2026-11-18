@@ -18,15 +18,20 @@ export function quadAt(c: number[], normal: number[], w: number, h: number): Flo
   return new Float32Array(v.flatMap(([sx, sy, u, t]) => [...P(sx!, sy!), u!, t!]));
 }
 
+/** Wraps text into lines; when it runs out of room the last line ends with "…". */
 function wrap(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxW: number, lh: number, maxY: number): number {
+  const ellipsis = (line: string) => {
+    while (line && ctx.measureText(`${line}…`).width > maxW) line = line.slice(0, -1);
+    return `${line}…`;
+  };
   for (const para of text.split(/\n+/)) {
     let line = '';
     for (const ch of para.trim()) {
       if (ctx.measureText(line + ch).width > maxW) {
+        if (y + lh > maxY) { ctx.fillText(ellipsis(line), x, y); return y + lh; }
         ctx.fillText(line, x, y);
         y += lh;
         line = ch;
-        if (y > maxY) return y;
       } else line += ch;
     }
     if (line) { ctx.fillText(line, x, y); y += lh * 1.35; }
@@ -44,8 +49,8 @@ function frame(ctx: CanvasRenderingContext2D, W: number, H: number): void {
 }
 
 const NOTES = {
-  desktop: ['WASD・矢印キーで歩く／ドラッグで見回す', 'Space でジャンプ／F で飛ぶ', '看板をクリックすると開きます'],
-  touch: ['左下をドラッグして歩く／右側をドラッグで見回す', '▲ でジャンプ', '看板をタップすると開きます'],
+  desktop: ['WASD・矢印キーで歩く／ドラッグで見回す', 'Space でジャンプ／F で飛ぶ', '振り返ると実績と記事の看板が並んでいます', '看板をクリックすると開きます'],
+  touch: ['左下をドラッグして歩く／右側をドラッグで見回す', '▲ でジャンプ', '振り返ると実績と記事の看板が並んでいます', '看板をタップすると開きます'],
 };
 
 /** The title card: what is in view first. A real element, so HTML-in-Canvas can paint it. */
@@ -98,8 +103,9 @@ export function workCanvas(it: Item): HTMLCanvasElement {
   }
   ctx.fillStyle = css('--fg') || '#000';
   ctx.textBaseline = 'top';
-  ctx.font = `500 34px ${FONT}`;
-  const y = wrap(ctx, it.title, 32, 220, W - 64, 40, 262);
+  // long titles get a smaller size so the summary keeps at least two lines
+  ctx.font = `500 ${ctx.measureText(it.title).width > (W - 64) * 1.6 ? 28 : 34}px ${FONT}`;
+  const y = wrap(ctx, it.title, 32, 220, W - 64, 38, 262);
   ctx.font = `300 20px ${FONT}`;
   ctx.fillStyle = css('--muted') || '#666';
   wrap(ctx, it.summary, 32, y - 6, W - 64, 27, 330);

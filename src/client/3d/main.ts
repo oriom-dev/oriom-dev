@@ -63,7 +63,7 @@ post(-2, -6, PLAZA_Y + 1); post(2, -6, PLAZA_Y + 1);
 items.forEach((it, i) => {
   const sl = layout.slots[i]!;
   const bx = Math.floor(sl.x), bz = Math.floor(sl.z);
-  const lift = Math.round(sl.y);
+  const lift = 0;
   post(bx, bz, PLAZA_Y + 1 + lift);
   sign({
     canvas: it.kind === 'work' ? workCanvas(it) : postCanvas(it),
@@ -77,18 +77,28 @@ items.forEach((it, i) => {
 });
 
 // redstone lamps on the floor between the spawn and the title sign: one row per node
-// for CPU and one for memory, ten lamps each; a label on either side
+// for CPU and one for memory, ten lamps each. Their labels stand beside the title
+// sign, inside the gap the arcs leave open, so they hide no other sign.
 const LAMP_X0 = -4, LAMP_Z0 = -2;
-post(-7, 0, PLAZA_Y + 1); post(7, 0, PLAZA_Y + 1);
-const lampSign = sign({ canvas: labelCanvas('クラスタ', '読み込み中…'), label: 'クラスタの CPU とメモリ', center: [-6.5, PLAZA_Y + 2.55, 0.5], normal: [1, 0, 0], w: 3.2, h: 1 });
-const numSign = sign({ canvas: labelCanvas('いまの数字', '読み込み中…'), href: '/stats', label: 'いま動いているものを開く', center: [7.5, PLAZA_Y + 2.55, 0.5], normal: [-1, 0, 0], w: 3.2, h: 1 });
+post(-5, -6, PLAZA_Y + 1); post(6, -6, PLAZA_Y + 1);
+const lampSign = sign({ canvas: labelCanvas('クラスタ', '読み込み中…'), label: 'クラスタの CPU とメモリ', center: [-4.5, PLAZA_Y + 2.55, -5], normal: [0, 0, 1], w: 3.2, h: 1 });
+const numSign = sign({ canvas: labelCanvas('いまの数字', '読み込み中…'), href: '/stats', label: 'いま動いているものを開く', center: [6.5, PLAZA_Y + 2.55, -5], normal: [0, 0, 1], w: 3.2, h: 1 });
+
+const FOVY = 1.15;
+/** How far back to stand so a sign `w` wide fits the screen (phones are narrow). */
+const fitDistance = (w: number) => {
+  const half = Math.atan(Math.tan(FOVY / 2) * (innerWidth / innerHeight));
+  return Math.max(3.4, (w / 2 + 0.4) / Math.tan(half));
+};
+// the spawn: the whole title sign in view
+player.p = [0.5, PLAZA_Y + 1, titleSign.center[2]! + fitDistance(titleSign.w)];
 
 /** Opened by URL: stand in front of that page's sign (the popup is already open). */
 function spawnAt(path: string): void {
   const s = signs.find((x) => x.href === path && x !== titleSign);
   if (!s) return;
-  const d = 3.4;
-  player.p = [s.center[0]! + s.normal[0]! * d, PLAZA_Y + 1 + Math.max(0, Math.round(s.center[1]! - PLAZA_Y - 3.05)), s.center[2]! + s.normal[2]! * d];
+  const d = fitDistance(s.w);
+  player.p = [s.center[0]! + s.normal[0]! * d, PLAZA_Y + 1, s.center[2]! + s.normal[2]! * d];
   player.yaw = Math.atan2(s.normal[0]!, s.normal[2]!);
   player.pitch = 0;
 }
@@ -294,7 +304,7 @@ async function start(): Promise<void> {
     }
     updateChunks(mobile ? 4 : 7);
     const eye = [player.p[0]!, player.p[1]! + player.eye, player.p[2]!];
-    const proj = perspective(1.15, innerWidth / innerHeight, 0.08, RADIUS * CS * 1.5, r.kind === 'webgpu');
+    const proj = perspective(FOVY, innerWidth / innerHeight, 0.08, RADIUS * CS * 1.5, r.kind === 'webgpu');
     viewProj = mul(proj, view(eye, player.yaw, player.pitch));
     const s = sky();
     u.set(viewProj, 0);

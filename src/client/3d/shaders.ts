@@ -37,6 +37,11 @@ fn shade(i: VO) -> vec4f {
   if (b == 6u && n.y != 0.0) { c = PAL[11]; }
   let cell = floor(i.wp * 8.0 - n * 0.5);
   c *= 0.9 + 0.2 * hash3(cell);
+  if (b == 9u || b == 10u) { // lamps: a frame and a cross, lit or not, so they never read as plain floor
+    let e = min(min(f.x, 1.0 - f.x), min(f.z, 1.0 - f.z));
+    let g = min(abs(f.x - 0.5), abs(f.z - 0.5));
+    if (e < 0.1 || g < 0.05) { c *= 0.45; }
+  }
   if (b == 10u) { return vec4f(fog(c * (1.2 + 0.3 * u.light.y), distance(i.wp, u.cam.xyz)), 1.0); }
   let face = select(select(0.8, 1.0, n.y > 0.5), 0.6, n.y < -0.5);
   let diff = max(dot(n, u.sun.xyz), 0.0) * u.sun.w;
@@ -102,6 +107,7 @@ void main() {
   if (b == 6u && n.y != 0.0) c = PAL[11];
   c *= 0.9 + 0.2 * hash3(floor(wp * 8.0 - n * 0.5));
   float d = distance(wp, cam.xyz);
+  if (b == 9u || b == 10u) { float e = min(min(f.x, 1.0 - f.x), min(f.z, 1.0 - f.z)); float g = min(abs(f.x - 0.5), abs(f.z - 0.5)); if (e < 0.1 || g < 0.05) c *= 0.45; }
   if (b == 10u) { o = vec4(fogc(c * (1.2 + 0.3 * light.y), d), 1.0); return; }
   float face = n.y > 0.5 ? 1.0 : n.y < -0.5 ? 0.6 : 0.8;
   float l = (light.x + max(dot(n, sun.xyz), 0.0) * sun.w * 0.65) * face * (0.5 + 0.5 * ao / 3.0);
