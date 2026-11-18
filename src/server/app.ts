@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, watch } from 'node:fs';
 import path from 'node:path';
 import { randomHue } from '../shared/color.ts';
-import { composeHtml, composeMd } from '../shared/compose.ts';
+import { composeHtml, composeMd, pageData } from '../shared/compose.ts';
 import { resolve } from '../shared/routes.ts';
 import type { PageOut, SiteBundle, Stats, Variant } from '../shared/types.ts';
 import { maybe3d, pickVariant } from '../shared/variant.ts';
@@ -151,6 +151,18 @@ export class App {
     }
     if (url.pathname === '/api/stats') {
       return { status: 200, headers: { 'content-type': 'application/json', 'cache-control': 'no-store', ...SECURITY }, body: JSON.stringify(this.stats()) };
+    }
+    if (url.pathname === '/_/page') {
+      // the popup's content for a page opened in place (title + body)
+      const r = resolve(url.searchParams.get('p') ?? '/');
+      const path = r.kind === 'redirect' ? r.location : r.path;
+      const page = this.site.pages[path];
+      if (page) this.counter.hit(path, req.client ?? '', req.userAgent ?? '');
+      return {
+        status: page ? 200 : 404,
+        headers: { 'content-type': 'application/json', 'cache-control': 'no-cache', 'x-site-version': this.site.version, ...SECURITY },
+        body: JSON.stringify(pageData(page ?? NOT_FOUND, this.stats())),
+      };
     }
     if (url.pathname === '/offline.json') {
       // Everything the service worker needs to compose any page without the network.

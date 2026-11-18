@@ -1,4 +1,5 @@
-export const VARIANTS = ['1d', '2d', '3d'] as const;
+/** The base views. Every page's own content opens over them in a popup (the 1D style). */
+export const VARIANTS = ['2d', '3d'] as const;
 export type Variant = (typeof VARIANTS)[number];
 
 export interface Link { label: string; url: string }
@@ -49,10 +50,22 @@ export interface Comment {
 /** Comments per post path: the Bluesky thread URL and its replies. */
 export type Comments = Record<string, { url: string; count: number; comments: Comment[] }>;
 
+/** What a sign in the 3D world needs to know about a work or a post. */
+export interface Item {
+  kind: 'work' | 'post';
+  path: string;
+  title: string;
+  date?: string;
+  summary: string;
+  by?: string; // posts from other sites
+  art?: string; // data-art attribute value
+}
+
 /** A page as served: everything except the variant template, hue and live stats. */
 export interface PageOut {
   path: string;
   title: string;
+  item?: Item;
   head: string; // <title>, meta, link tags
   body: string; // content HTML; may contain <!--@stats:*--> slots
   md: string; // markdown version; may contain <!--@stats:*--> slots

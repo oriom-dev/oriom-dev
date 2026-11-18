@@ -52,6 +52,6 @@ export function boot(): void {
     m.href = '/manifest.webmanifest';
     document.head.append(m);
     navigator.serviceWorker?.register('/sw.js').catch(() => {});
-    if (document.documentElement.dataset.v !== '3d' && !document.cookie.includes(`${NO3D_COOKIE}=`)) probe3d();
+    if (document.documentElement.dataset.v === '2d' && !document.cookie.includes(`${NO3D_COOKIE}=`)) probe3d();
   });
 }

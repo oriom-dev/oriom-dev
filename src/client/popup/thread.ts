@@ -1,8 +1,8 @@
-// The 1D page draws every non-text mark as ONE continuous Bézier path. It runs down
-// the margins ("lanes") and only enters the column through empty space: the gaps
-// between blocks, under headings, around tables, and through line drawings. It never
-// crosses a line of text.
-import { cr, oneStroke, parseArtAttr, type Pt } from '../../shared/art.ts';
+// The popup (the "1D" design) draws its marks as ONE continuous Bézier path. It runs
+// down the margins ("lanes") and only enters the column through empty space: the gaps
+// between blocks and under headings. It never crosses a line of text. Line drawings
+// are shown as they are, not woven into the path.
+import { cr, type Pt } from '../../shared/art.ts';
 
 const K = 0.5523; // circle-ish cubic handle length
 const fx = (n: number) => Math.round(n * 10) / 10;
@@ -80,45 +80,34 @@ class Pen {
 }
 
 interface Box { l: number; t: number; r: number; b: number }
-const box = (el: Element): Box => {
-  const r = el.getBoundingClientRect();
-  return { l: r.left + scrollX, t: r.top + scrollY, r: r.right + scrollX, b: r.bottom + scrollY };
-};
+// coordinates relative to the popup's inner box (which scrolls with its content)
+let origin = { x: 0, y: 0 };
+const rel = (r: DOMRect | DOMRectReadOnly): Box => ({ l: r.left - origin.x, t: r.top - origin.y, r: r.right - origin.x, b: r.bottom - origin.y });
+const box = (el: Element): Box => rel(el.getBoundingClientRect());
 /** First line box of an element (for bullets on multi-line items). */
 const firstLine = (el: Element): Box => {
   const range = document.createRange();
   range.selectNodeContents(el);
-  const r = range.getClientRects()[0] ?? el.getBoundingClientRect();
-  return { l: r.left + scrollX, t: r.top + scrollY, r: r.right + scrollX, b: r.bottom + scrollY };
+  return rel(range.getClientRects()[0] ?? el.getBoundingClientRect());
 };
 
-export function buildThread(): string {
-  const main = document.getElementById('c')!;
+export function buildThread(root: HTMLElement): string {
+  const ro = root.getBoundingClientRect();
+  origin = { x: ro.left, y: ro.top };
+  const main = root.querySelector<HTMLElement>('#c')!;
   const mb = box(main);
   const cs = getComputedStyle(main);
   const L = mb.l + parseFloat(cs.paddingLeft), Rx = mb.r - parseFloat(cs.paddingRight);
-  const W = document.documentElement.clientWidth;
-  const margin = L; // space left of the column (same on the right)
-  const g = Math.min(Math.max(margin * 0.45, 6), 72);
+  const W = root.clientWidth;
+  const margin = Math.min(L, W - Rx); // space beside the column
+  const g = Math.min(Math.max(margin * 0.5, 6), 56);
   const lanes = { L: L - g, R: Rx + g };
-  const wander = Math.max(0, Math.min(margin - g - 8, g - 8, 28));
+  const wander = Math.max(0, Math.min(margin - g - 6, g - 8, 20));
   let side: 'L' | 'R' = 'L';
   const lane = () => lanes[side];
-
-  const name = document.querySelector('.top .name');
-  const nb = name ? box(name) : { l: L, t: 40, r: L + 80, b: 70 };
-  // Enter from the left edge, underline the site name, curl, then drop to the lane.
-  const pen = new Pen([-4, nb.b + 2], 28, wander);
-  pen.to([nb.r + 6, nb.b + 2]);
-  const lx = nb.r + 6, ly = nb.b + 2, s = Math.min(14, (nb.b - nb.t) * 0.45);
-  pen.raw([lx, ly], `C${P([lx + s * 1.6, ly])} ${P([lx + s * 1.8, ly - s * 2])} ${P([lx + s * 0.8, ly - s * 2])}`
-    + `C${P([lx - s * 0.4, ly - s * 2])} ${P([lx, ly + s * 0.3])} ${P([lx + s * 2.2, ly + s * 0.6])}`, [lx + s * 2.2, ly + s * 0.6]);
-  const nav = document.querySelector('.top nav');
-  const navB = nav ? box(nav).b : nb.b + 30;
-  // the underline carries on to the right lane: a rule between the name and the nav
-  pen.to([lanes.R, ly + s * 0.6]).to([lanes.R, navB + 12]);
-  void W;
-  side = 'R';
+  // enter from the top edge of the popup, curl once, and drop down the left lane
+  const pen = new Pen([lanes.L + 40, -4], 24, wander);
+  pen.to([lanes.L + 40, 10]).loop([lanes.L + 40 - 6, 16], 6).to([lanes.L, 22]);
 
   /** Cross the column in the empty gap just above `y` (between blocks). */
   const cross = (to: 'L' | 'R', y: number) => {
@@ -128,8 +117,8 @@ export function buildThread(): string {
     pen.to([lane(), y]);
   };
 
-  const sel = '#c h1,#c h2,#c figure.art,#c li,#c table,#c pre,#c dl.stats,#c blockquote,.end';
-  for (const el of document.querySelectorAll(sel)) {
+  const sel = '#c h1,#c h2,#c li,#c table,#c pre,#c dl.stats,#c blockquote,.pop-end';
+  for (const el of root.querySelectorAll(sel)) {
     const b = box(el);
     const gapAbove = parseFloat(getComputedStyle(el).marginTop) || 12;
     if (b.b - b.t < 1) continue;
@@ -143,35 +132,8 @@ export function buildThread(): string {
         pen.to([lane(), y]);
         break;
       }
-      case 'FIGURE': {
-        const art = parseArtAttr((el as HTMLElement).dataset.art!);
-        const sc = (b.r - b.l) / 1000;
-        const line = oneStroke(art, sc, b.l, b.t);
-        const enter = line.start, exit = line.end;
-        const thumb = el.classList.contains('thumb');
-        if (thumb) cross('L', b.t - 8);
-        else cross(side, 0);
-        pen.to([lane(), enter[1]]);
-        if (side === 'R') {
-          // come around the top of the drawing to its left edge
-          pen.to([lane(), b.t - gapAbove / 2]).to([b.l - 10, b.t - gapAbove / 2]).to([b.l - 10, enter[1]]);
-        }
-        pen.raw(enter, line.d, exit);
-        if (thumb) {
-          // down the gutter beside the text, then back to the left lane under the item
-          const li = el.closest('li')!;
-          const lb = box(li);
-          const gx = exit[0] + 10;
-          pen.to([gx, exit[1]]).to([gx, lb.b + 8]).to([lanes.L, lb.b + 8]);
-          side = 'L';
-        } else {
-          pen.to([lanes.R, exit[1]]);
-          side = 'R';
-        }
-        break;
-      }
       case 'LI': {
-        if (el.querySelector(':scope > a > figure.art')) break; // drawn by its thumbnail
+        if (el.querySelector(':scope > a > figure.art')) break; // a work with its drawing: no bullet
         const list = el.parentElement!;
         if (list.tagName !== 'UL') break;
         if (side === 'R') cross('L', box(list).t - (parseFloat(getComputedStyle(list).marginTop) || 12) / 2 - 4);
@@ -199,7 +161,7 @@ export function buildThread(): string {
         break;
       }
       default: {
-        // .end: a spiral where the page ends
+        // .pop-end: a spiral where the page ends
         const y = b.t + 8;
         cross('L', y);
         const cx = Math.min(Math.max(W / 2, L + 40), W - 60), cy = b.b - 30;
@@ -220,22 +182,22 @@ export function buildThread(): string {
   return pen.d;
 }
 
-let first = true;
-export function drawThread(): void {
-  const svg = document.querySelector<SVGSVGElement>('svg.thread');
+/** Draws (and, the first time for this content, animates) the thread inside `root`. */
+export function drawThread(root: HTMLElement, animate: boolean): void {
+  const svg = root.querySelector<SVGSVGElement>('svg.thread');
   const path = svg?.querySelector('path');
-  if (!svg || !path) return;
-  const doc = document.documentElement;
-  svg.setAttribute('width', String(doc.clientWidth));
-  svg.setAttribute('height', String(doc.scrollHeight));
-  path.setAttribute('d', buildThread());
-  doc.classList.add('thread-on');
-  if (first && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  if (!svg || !path || !root.offsetParent) return;
+  svg.setAttribute('width', String(root.scrollWidth));
+  svg.setAttribute('height', String(root.scrollHeight));
+  path.setAttribute('d', buildThread(root));
+  svg.classList.remove('draw');
+  path.style.strokeDasharray = '';
+  if (animate && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
     const len = path.getTotalLength();
     path.style.setProperty('--len', String(len));
     path.style.strokeDasharray = String(len);
+    void svg.getBoundingClientRect();
     svg.classList.add('draw');
     path.addEventListener('animationend', () => { path.style.strokeDasharray = ''; svg.classList.remove('draw'); }, { once: true });
   }
-  first = false;
 }

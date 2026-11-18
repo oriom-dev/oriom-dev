@@ -1,45 +1,25 @@
-/* 3D: a block world behind the page. Without a GPU (or JS) the reader is simply open. */
+/* 3D: a block world; pages open over it in the popup. Without a GPU (or JS) the
+   world is not shown, and the popup and its links work as plain pages. */
 html,body{height:100%}
 body{overflow:hidden;font-weight:300}
-#view{position:fixed;inset:0;width:100%;height:100%;display:none;touch-action:none}
+html:not(.world) body{overflow:auto}
+#view{position:fixed;inset:0;width:100%;height:100%;display:none;touch-action:none;cursor:grab}
+#view:active{cursor:grabbing}#view:focus{outline:none}
 html.world #view{display:block}
 .btn{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:.35rem 1rem;cursor:pointer}
 .btn:hover{background:color-mix(in oklch,var(--line) 18%,var(--bg))}
 .bar{position:fixed;inset:0 0 auto 0;z-index:3;display:flex;flex-wrap:wrap;align-items:center;gap:.4rem 1.1rem;padding:.6rem 1rem;background:color-mix(in oklch,var(--bg) 80%,transparent);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+html:not(.world) .bar{position:static}
 .bar .name{letter-spacing:.2em;font-weight:400;text-decoration:none}.bar nav{display:flex;gap:1rem;flex-wrap:wrap}.bar a{text-decoration:none}
-#read{margin-left:auto}
-html:not(.world) #read{display:none}
-.reader{position:fixed;inset:0;z-index:2;overflow:auto;padding:4.5rem 1rem 3rem;overscroll-behavior:contain}
-html.world .reader{display:none;background:color-mix(in oklch,var(--bg) 35%,transparent)}
-html.world.reading .reader{display:block}
-.sheet{max-width:42rem;margin:0 auto;background:var(--bg);border:1px solid var(--line);border-radius:18px;padding:clamp(1.25rem,5vw,2.5rem)}
-html:not(.world) .close{display:none}
-.close{float:right;margin:0 0 1rem 1rem}
-h1{font-weight:300;font-size:clamp(1.6rem,6vw,2.4rem);line-height:1.3}
-h2{font-weight:400;font-size:1.25rem;margin-top:2.5rem}
-th{font-weight:400;color:var(--muted)}th,td:first-child{white-space:nowrap}
-blockquote{margin-inline:0;padding-left:1rem;border-left:2px solid var(--line);color:var(--muted)}
-figure.art{margin:1.5rem 0}figure.art svg{display:block;width:100%;height:auto;overflow:visible}
-figure.art path{fill:none;stroke:var(--line);stroke-width:1.5;vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}
-figure.hero{max-width:16rem;margin-inline:auto}
-.works{list-style:none;padding:0;display:grid;gap:.75rem}
-.works a{display:grid;grid-template-columns:3.5rem 1fr auto;column-gap:1rem;padding:.75rem;border:1px solid var(--line);border-radius:12px;text-decoration:none}
-.works figure{grid-row:1/4;margin:0}.works time{color:var(--muted);font-size:.85em}.works span,.works small{grid-column:2/4;font-size:.9em}.works small{color:var(--muted)}
-.end{margin-top:2.5rem;color:var(--muted);font-size:.85em}
+.tolist{margin-left:auto}
 .html-canvas{position:fixed;left:-200vw;top:0}
-.cross,.tip,.touch{display:none}
-html.playing .cross{display:block;position:fixed;left:50%;top:50%;width:14px;height:14px;margin:-7px;z-index:1;pointer-events:none;background:linear-gradient(var(--fg),var(--fg)) center/2px 100% no-repeat,linear-gradient(var(--fg),var(--fg)) center/100% 2px no-repeat;opacity:.7}
-html.playing .tip:not(:empty){display:block;position:fixed;left:50%;top:calc(50% + 1.5rem);transform:translateX(-50%);z-index:1;margin:0;padding:.2rem .8rem;border-radius:999px;background:color-mix(in oklch,var(--bg) 85%,transparent);font-size:.9em;pointer-events:none;white-space:nowrap}
-@media (pointer:coarse){html.playing .touch{display:block}}
-.joy{position:fixed;left:1.25rem;bottom:1.5rem;z-index:1;width:7.5rem;height:7.5rem;border:1px solid var(--line);border-radius:50%;background:color-mix(in oklch,var(--bg) 40%,transparent)}
-.joy i{position:absolute;left:50%;top:50%;width:2.75rem;height:2.75rem;margin:-1.375rem;border-radius:50%;background:color-mix(in oklch,var(--line) 60%,transparent)}
-.jump{position:fixed;right:1.25rem;bottom:2.5rem;z-index:1;width:3.5rem;height:3.5rem;padding:0}
 .title-card{width:1024px;height:768px;padding:96px 72px;background:var(--bg);color:var(--fg);border:6px solid var(--line);font-family:system-ui,sans-serif}
 .title-card .t{font-size:76px;font-weight:200;line-height:1.2;margin:0 0 40px;padding-bottom:24px;border-bottom:3px solid var(--line)}
 .title-card ul{list-style:none;padding:0;margin:0;font-size:32px;color:var(--muted);line-height:1.6}
-#view{cursor:grab}#view:active{cursor:grabbing}#view:focus{outline:none}
-.comments ul{list-style:none;padding:0;margin:0}
-.comments ul ul{padding-left:1rem;margin-left:.25rem;border-left:1px solid var(--line)}
-.comments li{margin:.75rem 0}
-.comments .who{margin:0;font-size:.85em;color:var(--muted)}.comments .who b{font-weight:500;color:var(--fg)}
-.comments p{margin:0}
+.cross,.tip,.touch{display:none}
+html.world:not(.popped) .cross{display:block;position:fixed;left:50%;top:50%;width:14px;height:14px;margin:-7px;z-index:1;pointer-events:none;background:linear-gradient(var(--fg),var(--fg)) center/2px 100% no-repeat,linear-gradient(var(--fg),var(--fg)) center/100% 2px no-repeat;opacity:.7}
+html.world:not(.popped) .tip:not(:empty){display:block;position:fixed;left:50%;top:calc(50% + 1.5rem);transform:translateX(-50%);z-index:1;margin:0;padding:.2rem .8rem;border-radius:999px;background:color-mix(in oklch,var(--bg) 85%,transparent);font-size:.9em;pointer-events:none;white-space:nowrap}
+@media (pointer:coarse){html.world:not(.popped) .touch{display:block}}
+.joy{position:fixed;left:1.25rem;bottom:1.5rem;z-index:1;width:7.5rem;height:7.5rem;border:1px solid var(--line);border-radius:50%;background:color-mix(in oklch,var(--bg) 40%,transparent)}
+.joy i{position:absolute;left:50%;top:50%;width:2.75rem;height:2.75rem;margin:-1.375rem;border-radius:50%;background:color-mix(in oklch,var(--line) 60%,transparent)}
+.jump{position:fixed;right:1.25rem;bottom:2.5rem;z-index:1;width:3.5rem;height:3.5rem;padding:0}

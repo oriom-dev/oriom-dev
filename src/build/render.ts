@@ -1,7 +1,7 @@
 import { Marked } from 'marked';
 import { artAttr, separatePath, type Art } from '../shared/art.ts';
 import { mdPath } from '../shared/routes.ts';
-import type { Comment, Comments, PageOut, Post, Work } from '../shared/types.ts';
+import type { Comment, Comments, Item, PageOut, Post, Work } from '../shared/types.ts';
 import { AUTHOR, loadStandard } from './content.ts';
 
 export const ORIGIN = 'https://oriom.dev';
@@ -47,7 +47,7 @@ const postLine = (p: Post) =>
 const LINKS = [
   ['GitHub', 'https://github.com/oriom-dev', '@oriom-dev'],
   ['Bluesky', 'https://bsky.app/profile/oriom.dev', '@oriom.dev'],
-  ['Team JISAKU', 'https://jisaku.dev/', 'jisaku.dev'],
+  ['Team JISAKU', 'https://jisaku.dev', 'jisaku.dev'],
 ] as const;
 
 /** Expand `{{name:arg}}` lines into Markdown (stats become serve-time slots). */
@@ -78,7 +78,7 @@ export function expand(md: string, ctx: Ctx, target: Target = 'md'): string {
 
 export function workMarkdown(w: Work, target: Target = 'md'): string {
   const rows: [string, string][] = [];
-  if (w.date) rows.push(['時期', w.date]);
+  if (w.date) rows.push(['時期', w.date.length === 4 ? `${w.date} 年度` : w.date]);
   rows.push(['種別', kindLabel(w.kind)]);
   if (w.team) rows.push(['チーム', w.team]);
   if (w.role.length) rows.push(['担当', w.role.join('、')]);
@@ -161,6 +161,6 @@ export function head(m: HeadMeta): string {
 }
 
 /** `htmlSource` is the Markdown to render as HTML when it differs from the .md version. */
-export function page(meta: HeadMeta, md: string, htmlSource = md): PageOut {
-  return { path: meta.path, title: meta.title, head: head(meta), body: mdToHtml(htmlSource), md: md.trim() + '\n' };
+export function page(meta: HeadMeta, md: string, htmlSource = md, item?: Item): PageOut {
+  return { path: meta.path, title: meta.title, ...(item ? { item } : {}), head: head(meta), body: mdToHtml(htmlSource), md: md.trim() + '\n' };
 }

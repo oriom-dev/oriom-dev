@@ -1,0 +1,31 @@
+/* The popup: every page's content, in the 1D style (thin text, one line for every mark). */
+.pop{position:fixed;inset:0;z-index:20;display:flex;justify-content:center;background:color-mix(in oklch,var(--bg) 45%,transparent);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+.pop[hidden]{display:none}
+.pop-scroll{width:min(100%,46rem);height:100%;overflow:auto;overscroll-behavior:contain;padding:clamp(0px,3vw,2.5rem) 0}
+.pop-inner{position:relative;min-height:100%;background:var(--bg);border:1px solid var(--line);border-radius:clamp(0px,2vw,20px);--pad:clamp(1.5rem,7vw,3.25rem);font-weight:200;letter-spacing:.02em}
+@media (max-width:46rem){.pop-inner{border-width:0}}
+.pop #c{padding:3.25rem var(--pad) 0}
+.pop-close{position:absolute;top:.6rem;right:.9rem;z-index:2;font-size:1.75rem;line-height:1;text-decoration:none;font-weight:200;padding:.25rem .5rem}
+.pop #c a{text-decoration:none;font-weight:400}.pop #c a:hover{font-weight:600}
+.pop h1,.pop h2,.pop h3{line-height:1.35;letter-spacing:.04em}
+.pop h1{font-weight:100;font-size:clamp(1.7rem,6.5vw,2.6rem);margin:0 0 1.75rem;padding-bottom:.5rem}
+.pop h2{font-weight:200;font-size:clamp(1.15rem,4vw,1.4rem);margin:3rem 0 1.25rem;padding-bottom:.5rem}
+.pop p,.pop ul,.pop ol,.pop table,.pop pre,.pop blockquote,.pop dl{margin:0 0 1.25rem}
+.pop ul,.pop ol{padding-left:1.4em}.pop ul{list-style:none}.pop li{margin:.35rem 0}
+.pop blockquote{margin-inline:0;padding-left:1.4em;color:var(--muted)}
+.pop th{font-weight:400;color:var(--muted)}.pop th,.pop td:first-child{white-space:nowrap}.pop td,.pop th{padding:.35rem 1rem .35rem 0}
+.pop figure.art{margin:2rem 0}
+.pop figure.art svg{display:block;width:100%;height:auto;overflow:visible}
+.pop figure.art path{fill:none;stroke:var(--line);stroke-width:1.25;vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}
+.pop figure.hero{max-width:min(100%,20rem);margin-inline:auto}
+.pop .works{padding:0;display:grid;gap:1.25rem}.pop .works li{margin:0}
+.pop .works a{display:grid;grid-template-columns:4rem 1fr;column-gap:1.25rem;font-weight:200}
+.pop .works figure{grid-row:1/4;margin:.35rem 0 0;align-self:start}
+.pop .works b{font-weight:400;grid-column:2;grid-row:1}.pop .works time{grid-column:2;grid-row:1;justify-self:end;color:var(--muted);font-size:.85em}
+.pop .works span,.pop .works small{grid-column:2;font-size:.95em}.pop .works small{color:var(--muted)}
+.pop .comments ul ul{padding-left:1.4em}.pop .comments .who{margin:0;font-size:.85em;color:var(--muted)}.pop .comments .who b{font-weight:400;color:var(--fg)}.pop .comments p{margin:0 0 .5rem}
+.pop-end{padding:3rem var(--pad) 5.5rem;color:var(--muted);font-size:.9em}
+.pop .thread{position:absolute;top:0;left:0;pointer-events:none;overflow:visible;fill:none;stroke:var(--line);stroke-width:1.25;stroke-linecap:round;stroke-linejoin:round}
+.pop .thread.draw path{animation:draw 2.4s cubic-bezier(.3,.1,.2,1) forwards}
+@keyframes draw{from{stroke-dashoffset:var(--len)}to{stroke-dashoffset:0}}
+html.popped body{overflow:hidden}

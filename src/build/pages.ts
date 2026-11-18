@@ -1,6 +1,7 @@
 // Markdown -> pages. No esbuild here: the server imports this at run time.
 import type { Comments, PageOut, Post, Work } from '../shared/types.ts';
-import { loadPages } from './content.ts';
+import { artAttr } from '../shared/art.ts';
+import { AUTHOR, loadPages } from './content.ts';
 import { expand, page, postMarkdown, workMarkdown } from './render.ts';
 
 /** Pages only (no esbuild): the server calls this again when followed sites post. */
@@ -18,10 +19,12 @@ export function buildPages(works: Work[], posts: Post[], comments: Comments = {}
     add(page(meta, expand(d.body, ctx, 'md'), expand(d.body, ctx, 'html')));
   }
   for (const w of works) {
-    add(page({ path: `/works/${w.slug}`, title: w.title, description: w.summary }, workMarkdown(w, 'md'), workMarkdown(w, 'html')));
+    add(page({ path: `/works/${w.slug}`, title: w.title, description: w.summary }, workMarkdown(w, 'md'), workMarkdown(w, 'html'),
+      { kind: 'work', path: `/works/${w.slug}`, title: w.title, date: w.date, summary: w.summary, ...(w.art ? { art: artAttr(w.art) } : {}) }));
   }
   for (const p of posts) {
-    add(page({ path: p.path, title: p.title, description: p.description, type: 'article', atUri: p.atUri, published: p.date }, postMarkdown(p, 'md', comments[p.path]), postMarkdown(p, 'html', comments[p.path])));
+    add(page({ path: p.path, title: p.title, description: p.description, type: 'article', atUri: p.atUri, published: p.date }, postMarkdown(p, 'md', comments[p.path]), postMarkdown(p, 'html', comments[p.path]),
+      { kind: 'post', path: p.path, title: p.title, date: p.date, summary: p.description, ...(p.author.did !== AUTHOR.did ? { by: p.author.name } : {}) }));
   }
   return pages;
 }

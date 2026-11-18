@@ -26,7 +26,7 @@ function paletteCss(): string {
 
 // Favicon: one Bézier stroke in the page's hue, inline so it costs no request.
 const icon = (variant: Variant) => {
-  const d = { '1d': 'M4 24C10 4 22 4 28 24', '2d': 'M5 5h22v22H5z', '3d': 'M16 3 28 10v12L16 29 4 22V10z' }[variant];
+  const d = { '2d': 'M5 5h22v22H5z', '3d': 'M16 3 28 10v12L16 29 4 22V10z' }[variant];
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path d="${d}" fill="none" stroke="oklch(0.6 0.12 __HUE__)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 };
@@ -38,9 +38,12 @@ const icon = (variant: Variant) => {
 export function template(variant: Variant, slots: Record<string, string> = {}): string {
   const dir = path.join(CLIENT, variant);
   const css = minCss(
-    paletteCss() + readFileSync(path.join(CLIENT, 'base.css'), 'utf8') + readFileSync(path.join(dir, 'style.css'), 'utf8'),
+    paletteCss() + readFileSync(path.join(CLIENT, 'base.css'), 'utf8') + readFileSync(path.join(dir, 'style.css'), 'utf8')
+      + readFileSync(path.join(CLIENT, 'popup/popup.css'), 'utf8'),
   );
   const js = bundleJs(path.join(dir, 'main.ts')).replace(/<\/script/gi, '<\\/script');
+  const popup = readFileSync(path.join(CLIENT, 'popup/popup.html'), 'utf8').trim();
+  slots = { ...slots, popup };
   let html = existsSync(path.join(dir, 'shell.html')) ? readFileSync(path.join(dir, 'shell.html'), 'utf8').trim() : '<main id="c"><!--@body--></main>';
   // build-time slots (site-wide parts such as the 2D map); serve-time slots stay
   for (const [k, v] of Object.entries(slots)) html = html.replace(`<!--#${k}-->`, () => v);
@@ -53,7 +56,7 @@ export function template(variant: Variant, slots: Record<string, string> = {}): 
     + `<link rel="icon" href="${icon(variant)}">`
     + '<!--@head-->'
     + `<style>${css}</style></head>`
-    + `<body><a class="skip" href="#c">本文へ移動</a>${html}`
+    + `<body><a class="skip" href="__SKIP__">本文へ移動</a>${html}`
     + '<script type="application/json" id="stats"><!--@stats--></script>'
     + `<script>${js}</script></body></html>`;
 }

@@ -151,6 +151,16 @@ def procedural(fn):
             a, b = (42, 30 + i * 55), (330, 52 + j * 70)
             out.append(bezier(a, (160, a[1]), (220, b[1]), b, 18))
         return out
+    if fn == 'stage':  # 国高祭: an open curtain over the stage, and a camera on a tripod in front
+        curtain_l = bezier((0, 0), (40, 60), (20, 120), (70, 150), 20)
+        top = bezier((0, 0), (120, 18), (240, 18), (360, 0), 24)
+        curtain_r = bezier((360, 0), (320, 60), (340, 120), (290, 150), 20)
+        floor = bezier((10, 170), (120, 165), (240, 165), (350, 170), 20)
+        cam = rounded_rect(140, 195, 70, 44, 10)
+        lens = circle(222, 217, 12, 16)
+        legs = bezier((175, 239), (170, 262), (160, 280), (150, 300), 8)
+        legs2 = bezier((175, 239), (180, 262), (190, 280), (200, 300), 8)
+        return [curtain_l, top, curtain_r, floor, cam, lens, legs, legs2]
     raise ValueError(fn)
 
 

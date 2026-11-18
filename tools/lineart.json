@@ -60,5 +60,11 @@
     "mode": "proc",
     "fn": "match",
     "title": "学生と研究室を結ぶ曲線"
+  },
+  "kunitachi-festival": {
+    "mode": "proc",
+    "fn": "stage",
+    "title": "幕の開いたステージと配信カメラ",
+    "keep_order": true
   }
 }

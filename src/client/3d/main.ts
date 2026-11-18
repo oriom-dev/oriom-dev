@@ -1,15 +1,17 @@
-// 3D: walk around a block world generated from noise. The site's content stands on
-// signs in the plaza around the spawn point; the reader overlay holds the same DOM.
+// 3D: walk around a block world generated from noise. Every work and post stands on
+// a sign around the plaza; opening one shows the page in the popup, in place.
 import { oklchToLinearSrgb } from '../../shared/color.ts';
 import { bytes } from '../../shared/stats.ts';
-import type { Stats } from '../../shared/types.ts';
+import type { Item, Stats } from '../../shared/types.ts';
 import { NO3D_COOKIE } from '../../shared/variant.ts';
 import { boot, readStats } from '../common.ts';
+import { initPopup } from '../popup/popup.ts';
 import { webgl2 } from './gl.ts';
 import { webgpu } from './gpu.ts';
+import { ringLayout } from './layout.ts';
 import { forward, invert, mul, perspective, view } from './math.ts';
 import { meshChunk } from './mesh.ts';
-import { cardCanvas, htmlCanvas, labelCanvas, quadAt, type Sign, titleCard, workCanvas } from './panels.ts';
+import { cardCanvas, htmlCanvas, labelCanvas, postCanvas, quadAt, type Sign, titleCard, workCanvas } from './panels.ts';
 import { Player } from './player.ts';
 import type { Renderer } from './render.ts';
 import { UNIFORM_FLOATS } from './render.ts';
@@ -20,36 +22,28 @@ boot();
 const root = document.documentElement;
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const canvas = $<HTMLCanvasElement>('view');
-const main = $('c');
-const sheet = document.querySelector<HTMLElement>('.sheet')!;
 const tip = $('tip');
 const mobile = matchMedia('(pointer:coarse)').matches;
 const hue = Number(root.style.getPropertyValue('--h')) || 220;
+const popped = () => root.classList.contains('popped');
 
-// ---------------------------------------------------------------- reader
-function openReader(): void {
-  root.classList.add('reading');
-  keys.clear();
-  (main.querySelector('h1') as HTMLElement | null)?.focus?.();
-}
-function closeReader(): void {
-  root.classList.remove('reading');
-  canvas.focus({ preventScroll: true });
-}
-$('read').onclick = openReader;
-sheet.querySelector<HTMLButtonElement>('.close')!.onclick = closeReader;
-main.querySelector('h1')?.setAttribute('tabindex', '-1');
+// ---------------------------------------------------------------- popup
+const popup = initPopup({
+  onOpen: () => keys.clear(),
+  onClose: () => canvas.focus({ preventScroll: true }),
+});
 
 // ---------------------------------------------------------------- world and signs
-const world = new World();
+let items: Item[] = [];
+try { items = JSON.parse($('items').textContent || '[]'); } catch { /* no signs */ }
+const layout = ringLayout(items.length);
+const world = new World(layout.plaza);
 const player = new Player(world);
-if (new URLSearchParams(location.search).has('debug')) Object.assign(window, { __player: player, __keys: () => keys });
-player.p = [0.5, PLAZA_Y + 1, 4.5];
+if (new URLSearchParams(location.search).has('debug')) Object.assign(window, { __player: player, __keys: () => keys, __signs: () => signs });
+player.p = [0.5, PLAZA_Y + 1, 3.5];
 player.pitch = 0.08;
 
 const signs: Sign[] = [];
-// every work, from a <template> the build embeds in the 3D page (inert: not in the a11y tree twice)
-const workLinks = [...(document.querySelector<HTMLTemplateElement>('template#works-data')?.content.querySelectorAll<HTMLAnchorElement>('a') ?? [])];
 const sign = (s: Omit<Sign, 'id' | 'quad'>) => {
   const sg = { ...s, id: signs.length, quad: quadAt(s.center, s.normal, s.w, s.h) };
   signs.push(sg);
@@ -57,30 +51,45 @@ const sign = (s: Omit<Sign, 'id' | 'quad'>) => {
 };
 const post = (x: number, z: number, top: number) => { for (let y = PLAZA_Y + 1; y <= top; y++) world.overrides.set(`${x},${y},${z}`, B.Log); };
 
-// the first thing in view: the page title and how to move; clicking it opens the page
-const title = main.querySelector('h1')?.textContent?.trim() || document.title;
-const card = titleCard(title, mobile);
-const pageSign = sign({ canvas: cardCanvas(card), reader: true, label: '本文を読む', center: [0.5, PLAZA_Y + 4.2, -6], normal: [0, 0, 1], w: 6, h: 4.5 });
-post(-2, -7, PLAZA_Y + 2); post(2, -7, PLAZA_Y + 2);
+// straight ahead: the site's name and how to move; clicking it opens the top page
+const card = titleCard('oriom', mobile);
+const titleSign = sign({ canvas: cardCanvas(card), href: '/', label: 'トップを開く', center: [0.5, PLAZA_Y + 3.7, -5], normal: [0, 0, 1], w: 5.6, h: 4.2 });
+post(-2, -6, PLAZA_Y + 1); post(2, -6, PLAZA_Y + 1);
 
-// works in an arc around the plaza
-const arcWorks = workLinks;
-arcWorks.forEach((a, i) => {
-  const n = arcWorks.length;
-  const ang = Math.PI * (0.32 + (1.36 * (i + 0.5)) / n); // from the left of the page sign, round the back, to the right
-  const r = 8.5;
-  const x = -Math.sin(ang) * r, z = -Math.cos(ang) * r;
-  const nx = Math.sin(ang), nz = Math.cos(ang); // face the centre
-  const bx = Math.floor(x), bz = Math.floor(z);
-  post(bx, bz, PLAZA_Y + 1);
-  sign({ canvas: workCanvas(a), href: a.getAttribute('href')!, label: `${a.querySelector('b')?.textContent ?? ''} を開く`, center: [bx + 0.5, PLAZA_Y + 3.05, bz + 0.5], normal: [nx, 0, nz], w: 2.4, h: 1.8 });
+// works, then posts, on the arcs around the plaza
+items.forEach((it, i) => {
+  const sl = layout.slots[i]!;
+  const bx = Math.floor(sl.x), bz = Math.floor(sl.z);
+  const lift = Math.round(sl.y);
+  post(bx, bz, PLAZA_Y + 1 + lift);
+  sign({
+    canvas: it.kind === 'work' ? workCanvas(it) : postCanvas(it),
+    href: it.path,
+    label: `${it.title} を開く`,
+    center: [bx + 0.5, PLAZA_Y + 3.05 + lift, bz + 0.5],
+    normal: [sl.nx, 0, sl.nz],
+    w: 2.4,
+    h: 1.8,
+  });
 });
 
-// redstone lamps: one row per node for CPU and one for memory, ten lamps each
-const LAMP_X0 = -4, LAMP_Z0 = 5;
-const lampSign = sign({ canvas: labelCanvas('クラスタ', '読み込み中…'), label: 'クラスタの CPU とメモリ', center: [0.5, PLAZA_Y + 2.55, LAMP_Z0 + 4], normal: [0, 0, -1], w: 3.2, h: 1 });
-post(0, LAMP_Z0 + 4, PLAZA_Y + 1); post(-6, 2, PLAZA_Y + 1);
-const numSign = sign({ canvas: labelCanvas('いまの数字', '読み込み中…'), href: '/stats', label: 'いま動いているものを開く', center: [-5.5, PLAZA_Y + 2.55, 2.5], normal: [1, 0, 0], w: 3.2, h: 1 });
+// redstone lamps on the floor between the spawn and the title sign: one row per node
+// for CPU and one for memory, ten lamps each; a label on either side
+const LAMP_X0 = -4, LAMP_Z0 = -2;
+post(-7, 0, PLAZA_Y + 1); post(7, 0, PLAZA_Y + 1);
+const lampSign = sign({ canvas: labelCanvas('クラスタ', '読み込み中…'), label: 'クラスタの CPU とメモリ', center: [-6.5, PLAZA_Y + 2.55, 0.5], normal: [1, 0, 0], w: 3.2, h: 1 });
+const numSign = sign({ canvas: labelCanvas('いまの数字', '読み込み中…'), href: '/stats', label: 'いま動いているものを開く', center: [7.5, PLAZA_Y + 2.55, 0.5], normal: [-1, 0, 0], w: 3.2, h: 1 });
+
+/** Opened by URL: stand in front of that page's sign (the popup is already open). */
+function spawnAt(path: string): void {
+  const s = signs.find((x) => x.href === path && x !== titleSign);
+  if (!s) return;
+  const d = 3.4;
+  player.p = [s.center[0]! + s.normal[0]! * d, PLAZA_Y + 1 + Math.max(0, Math.round(s.center[1]! - PLAZA_Y - 3.05)), s.center[2]! + s.normal[2]! * d];
+  player.yaw = Math.atan2(s.normal[0]!, s.normal[2]!);
+  player.pitch = 0;
+}
+if (location.pathname !== '/') spawnAt(location.pathname);
 
 function applyStats(s: Stats | null): void {
   if (!s) return;
@@ -98,7 +107,7 @@ function applyStats(s: Stats | null): void {
   if (renderer) {
     renderer.setPanel(lampSign.id, lampSign.quad, lampSign.canvas);
     renderer.setPanel(numSign.id, numSign.quad, numSign.canvas);
-    for (const key of ['-1,0', '0,0']) if (loaded.has(key)) dirty.add(key);
+    for (const key of ['-1,-1', '0,-1', '-1,0', '0,0']) if (loaded.has(key)) dirty.add(key);
   }
 }
 
@@ -161,8 +170,7 @@ let look: { id: number; x: number; y: number; moved: number } | null = null;
 let jumpHeld = false;
 
 document.addEventListener('keydown', (e) => {
-  if (root.classList.contains('reading')) { if (e.key === 'Escape') closeReader(); return; }
-  if (!root.classList.contains('playing') || e.altKey || e.ctrlKey || e.metaKey) return;
+  if (popped() || !root.classList.contains('world') || e.altKey || e.ctrlKey || e.metaKey) return;
   if ((e.target as Element).closest?.('a,button,input,textarea')) return;
   keys.add(e.code);
   if (e.code === 'KeyF') player.fly = !player.fly;
@@ -170,8 +178,6 @@ document.addEventListener('keydown', (e) => {
   if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
 });
 document.addEventListener('keyup', (e) => keys.delete(e.code));
-// keyboard users who tab into the content get the reader
-main.addEventListener('focusin', () => { if (!root.classList.contains('reading')) openReader(); });
 
 // mouse: drag to look, click to open. touch: the left half is a joystick, the right
 // half looks around; a tap opens what it hits.
@@ -222,7 +228,7 @@ function aimed(sx?: number, sy?: number): Sign | null {
   }
   let best: Sign | null = null, bestT = 14;
   for (const s of signs) {
-    if (!s.href && !s.reader) continue;
+    if (!s.href) continue;
     const n = s.normal;
     const denom = dir[0]! * n[0]! + dir[2]! * n[2]!;
     if (denom >= -1e-3) continue; // looking at its back or edge-on
@@ -235,9 +241,7 @@ function aimed(sx?: number, sy?: number): Sign | null {
   return best;
 }
 function activate(s: Sign | null): void {
-  if (!s) return;
-  if (s.reader) openReader();
-  else if (s.href) location.href = s.href;
+  if (s?.href) popup.open(s.href, { show: true });
 }
 
 // ---------------------------------------------------------------- start
@@ -249,16 +253,16 @@ async function start(): Promise<void> {
   }
   if (!renderer) {
     document.cookie = `${NO3D_COOKIE}=1;path=/;max-age=31536000;samesite=lax;secure`;
-    return; // the reader stays open: still the whole page
+    return; // the popup and its links still work without the world
   }
-  root.classList.add('world', 'playing');
+  root.classList.add('world');
   root.dataset.renderer = renderer.kind;
   canvas.tabIndex = 0;
   canvas.focus({ preventScroll: true });
   const r = renderer;
   for (const s of signs) r.setPanel(s.id, s.quad, s.canvas);
   // HTML-in-Canvas: when available the big sign shows the live DOM itself
-  htmlCanvas(card, (cv) => r.setPanel(pageSign.id, pageSign.quad, cv));
+  htmlCanvas(card, (cv) => r.setPanel(titleSign.id, titleSign.quad, cv));
   applyStats(readStats());
   document.addEventListener('stats', (e) => applyStats((e as CustomEvent<Stats>).detail));
 
@@ -277,7 +281,7 @@ async function start(): Promise<void> {
   const frame = (now: number) => {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
-    if (!root.classList.contains('reading')) {
+    if (!popped()) {
       const k = (c: string) => (keys.has(c) ? 1 : 0);
       const mx = k('KeyD') + k('ArrowRight') - k('KeyA') - k('ArrowLeft') + joy.x;
       const mz = k('KeyW') + k('ArrowUp') - k('KeyS') - k('ArrowDown') + joy.y;

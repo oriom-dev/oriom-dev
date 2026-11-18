@@ -1,7 +1,11 @@
-/* 2D: a plane you scroll in every direction. The page is a card; the works spread out
+/* 2D: a plane you scroll in every direction. The top page is a card; the works spread out
    beside it as a DAG in time order. */
 :root{--card:min(40rem,calc(100vw - 2.5rem));--grid:color-mix(in oklch,var(--line) 35%,transparent)}
-body{font-weight:300;background-image:radial-gradient(circle,var(--grid) 1px,transparent 1.6px);background-size:28px 28px;background-attachment:local;cursor:grab}
+/* the plane scrolls inside .space, not the document: the page stays exactly as wide
+   as the screen, so phones do not zoom out and fixed layers stay put */
+html,body{height:100%;overflow:hidden}
+body{font-weight:300}
+.space{position:fixed;inset:0;overflow:auto;overscroll-behavior:contain;background-image:radial-gradient(circle,var(--grid) 1px,transparent 1.6px);background-size:28px 28px;background-attachment:local;cursor:grab}
 body.panning{cursor:grabbing;user-select:none}
 .bar{position:fixed;inset:0 0 auto 0;z-index:5;display:flex;flex-wrap:wrap;align-items:baseline;gap:.25rem 1.25rem;padding:.6rem 1.25rem;background:color-mix(in oklch,var(--bg) 88%,transparent);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-bottom:1px solid var(--grid)}
 .bar .name{font-weight:400;letter-spacing:.2em;text-decoration:none}
@@ -11,18 +15,18 @@ body.panning{cursor:grabbing;user-select:none}
 .plane{position:relative;display:grid;grid-template-columns:var(--card) max-content;align-items:start;gap:clamp(2rem,8vw,7rem);padding:clamp(5.5rem,12vw,7rem) 1.25rem 6rem;width:max-content}
 .card{width:var(--card);background:var(--bg);border:1px solid var(--line);border-radius:18px;padding:clamp(1.25rem,4vw,2.5rem);box-shadow:0 1px 0 var(--grid);cursor:auto;position:relative;z-index:1}
 .card>:first-child{margin-top:0}
-h1{font-weight:300;font-size:clamp(1.6rem,6vw,2.4rem);line-height:1.3}
-h2{font-weight:400;font-size:1.25rem;margin-top:2.5rem;border-bottom:1px solid var(--grid);padding-bottom:.35rem}
-th{font-weight:400;color:var(--muted)}th,td:first-child{white-space:nowrap}
-blockquote{margin-inline:0;padding-left:1rem;border-left:2px solid var(--line);color:var(--muted)}
-figure.art{margin:1.5rem 0}figure.art svg{display:block;width:100%;height:auto;overflow:visible}
-figure.art path{fill:none;stroke:var(--line);stroke-width:1.5;vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}
-figure.hero{max-width:16rem;margin-inline:auto}
-.works{list-style:none;padding:0;display:grid;gap:.75rem}
-.works a{display:grid;grid-template-columns:3.5rem 1fr auto;column-gap:1rem;padding:.75rem;border:1px solid var(--grid);border-radius:12px;text-decoration:none}
-.works a:hover{border-color:var(--line)}
-.works figure{grid-row:1/4;margin:0}.works b{font-weight:500}.works time{color:var(--muted);font-size:.85em}
-.works span,.works small{grid-column:2/4;font-size:.9em}.works small{color:var(--muted)}
+.card h1{font-weight:300;font-size:clamp(1.6rem,6vw,2.4rem);line-height:1.3}
+.card h2{font-weight:400;font-size:1.25rem;margin-top:2.5rem;border-bottom:1px solid var(--grid);padding-bottom:.35rem}
+.card th{font-weight:400;color:var(--muted)}.card th,.card td:first-child{white-space:nowrap}
+.card blockquote{margin-inline:0;padding-left:1rem;border-left:2px solid var(--line);color:var(--muted)}
+.card figure.art{margin:1.5rem 0}.card figure.art svg{display:block;width:100%;height:auto;overflow:visible}
+.card figure.art path{fill:none;stroke:var(--line);stroke-width:1.5;vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}
+.card figure.hero{max-width:16rem;margin-inline:auto}
+.card .works{list-style:none;padding:0;display:grid;gap:.75rem}
+.card .works a{display:grid;grid-template-columns:3.5rem 1fr auto;column-gap:1rem;padding:.75rem;border:1px solid var(--grid);border-radius:12px;text-decoration:none}
+.card .works a:hover{border-color:var(--line)}
+.card .works figure{grid-row:1/4;margin:0}.card .works b{font-weight:500}.card .works time{color:var(--muted);font-size:.85em}
+.card .works span,.card .works small{grid-column:2/4;font-size:.9em}.card .works small{color:var(--muted)}
 .end{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--grid);color:var(--muted);font-size:.85em}
 .map{position:relative}
 .edges{position:absolute;inset:0;overflow:visible}
@@ -37,8 +41,9 @@ figure.hero{max-width:16rem;margin-inline:auto}
 .node b{font-weight:500;line-height:1.3}.node small{color:var(--muted)}
 .node.here{outline:3px solid var(--line);outline-offset:3px}
 .link{position:absolute;inset:0;overflow:visible;pointer-events:none;fill:none;stroke:var(--line);stroke-width:1.5;stroke-dasharray:6 6}
-.comments ul{list-style:none;padding:0;margin:0}
-.comments ul ul{padding-left:1rem;margin-left:.25rem;border-left:1px solid var(--line)}
-.comments li{margin:.75rem 0}
-.comments .who{margin:0;font-size:.85em;color:var(--muted)}.comments .who b{font-weight:500;color:var(--fg)}
-.comments p{margin:0}
+.card .comments ul{list-style:none;padding:0;margin:0}
+.card .comments ul ul{padding-left:1rem;margin-left:.25rem;border-left:1px solid var(--line)}
+.card .comments li{margin:.75rem 0}
+.card .comments .who{margin:0;font-size:.85em;color:var(--muted)}.card .comments .who b{font-weight:500;color:var(--fg)}
+.card .comments p{margin:0}
+.node figure.art path{fill:none;stroke:var(--line);stroke-width:1.5;vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}

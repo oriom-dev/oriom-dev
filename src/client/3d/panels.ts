@@ -2,8 +2,9 @@
 // drawElementImage) when the browser has it, so the sign shows the real, accessible
 // DOM; otherwise the text is laid out by hand on a 2D canvas.
 import { parseArtAttr, separatePath } from '../../shared/art.ts';
+import type { Item } from '../../shared/types.ts';
 
-export interface Sign { id: number; quad: Float32Array; canvas: HTMLCanvasElement; href?: string; reader?: boolean; label: string; center: number[]; normal: number[]; w: number; h: number }
+export interface Sign { id: number; quad: Float32Array; canvas: HTMLCanvasElement; href?: string; label: string; center: number[]; normal: number[]; w: number; h: number }
 
 const css = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 const FONT = 'system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif';
@@ -43,8 +44,8 @@ function frame(ctx: CanvasRenderingContext2D, W: number, H: number): void {
 }
 
 const NOTES = {
-  desktop: ['WASD・矢印キーで歩く／ドラッグで見回す', 'Space でジャンプ／F で飛ぶ', '看板をクリックすると開きます', 'この看板をクリックすると本文を読めます'],
-  touch: ['左下をドラッグして歩く／右側をドラッグで見回す', '▲ でジャンプ', '看板をタップすると開きます', 'この看板をタップすると本文を読めます'],
+  desktop: ['WASD・矢印キーで歩く／ドラッグで見回す', 'Space でジャンプ／F で飛ぶ', '看板をクリックすると開きます'],
+  touch: ['左下をドラッグして歩く／右側をドラッグで見回す', '▲ でジャンプ', '看板をタップすると開きます'],
 };
 
 /** The title card: what is in view first. A real element, so HTML-in-Canvas can paint it. */
@@ -80,15 +81,14 @@ export function cardCanvas(card: HTMLElement): HTMLCanvasElement {
   return cv;
 }
 
-/** A work's sign: its one-stroke drawing, title and summary. */
-export function workCanvas(a: HTMLAnchorElement): HTMLCanvasElement {
+/** A work's sign: its line drawing, title and summary. */
+export function workCanvas(it: Item): HTMLCanvasElement {
   const W = 512, H = 384;
   const cv = Object.assign(document.createElement('canvas'), { width: W, height: H });
   const ctx = cv.getContext('2d')!;
   frame(ctx, W, H);
-  const fig = a.querySelector<HTMLElement>('figure.art');
-  if (fig?.dataset.art) {
-    const art = parseArtAttr(fig.dataset.art);
+  if (it.art) {
+    const art = parseArtAttr(it.art);
     const boxH = 170, s = Math.min((W - 120) / 1000, boxH / (1000 / art.aspect));
     const ox = (W - 1000 * s) / 2, oy = 36 + (boxH - (1000 / art.aspect) * s) / 2;
     ctx.strokeStyle = css('--line') || '#888';
@@ -99,10 +99,29 @@ export function workCanvas(a: HTMLAnchorElement): HTMLCanvasElement {
   ctx.fillStyle = css('--fg') || '#000';
   ctx.textBaseline = 'top';
   ctx.font = `500 34px ${FONT}`;
-  const y = wrap(ctx, a.querySelector('b')?.textContent ?? '', 32, 220, W - 64, 40, 262);
+  const y = wrap(ctx, it.title, 32, 220, W - 64, 40, 262);
   ctx.font = `300 20px ${FONT}`;
   ctx.fillStyle = css('--muted') || '#666';
-  wrap(ctx, a.querySelector('span')?.textContent ?? '', 32, y - 6, W - 64, 27, 330);
+  wrap(ctx, it.summary, 32, y - 6, W - 64, 27, 330);
+  return cv;
+}
+
+/** A post's sign: date, title, the first lines of its description. */
+export function postCanvas(it: Item): HTMLCanvasElement {
+  const W = 512, H = 384;
+  const cv = Object.assign(document.createElement('canvas'), { width: W, height: H });
+  const ctx = cv.getContext('2d')!;
+  frame(ctx, W, H);
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = css('--muted') || '#666';
+  ctx.font = `400 22px ${FONT}`;
+  ctx.fillText(`${it.date ?? ''}${it.by ? `・${it.by}` : ''}`, 32, 36, W - 64);
+  ctx.fillStyle = css('--fg') || '#000';
+  ctx.font = `400 36px ${FONT}`;
+  const y = wrap(ctx, it.title, 32, 76, W - 64, 46, 200);
+  ctx.font = `300 21px ${FONT}`;
+  ctx.fillStyle = css('--muted') || '#666';
+  wrap(ctx, it.summary, 32, y + 4, W - 64, 30, 330);
   return cv;
 }
 

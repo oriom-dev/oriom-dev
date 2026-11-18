@@ -11,7 +11,6 @@ import { strokeIcon } from './png.ts';
 import { ORIGIN, PUBLICATION_URI } from './render.ts';
 import { bundleJs } from './templates.ts';
 import { buildPages } from './pages.ts';
-import { workItem } from './render.ts';
 import { graphHtml, layout } from './graph.ts';
 import { template } from './templates.ts';
 
@@ -22,7 +21,6 @@ export function buildSite(extraPosts: Post[] = []): SiteBundle {
 
   const slots = {
     map: graphHtml(layout(works)),
-    works: `<template id="works-data"><ul class="works">${works.map(workItem).join('')}</ul></template>`,
   };
   const templates = Object.fromEntries(VARIANTS.map((v) => [v, template(v, slots)])) as SiteBundle['templates'];
   const scriptHashes = Object.fromEntries(VARIANTS.map((v) => [v, inlineScriptHashes(templates[v])])) as SiteBundle['scriptHashes'];

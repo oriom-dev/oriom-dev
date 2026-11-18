@@ -3,7 +3,7 @@
 // pages with the same code as the server, so even offline every visit is a random
 // design in a random hue, and every page is still one complete document.
 import { randomHue } from '../shared/color.ts';
-import { composeHtml, composeMd } from '../shared/compose.ts';
+import { composeHtml, composeMd, pageData } from '../shared/compose.ts';
 import { resolve } from '../shared/routes.ts';
 import type { SiteBundle, Stats } from '../shared/types.ts';
 import { pickVariant } from '../shared/variant.ts';
@@ -78,6 +78,16 @@ self.addEventListener('fetch', (e) => {
   }
   if (STATIC.includes(url.pathname)) {
     e.respondWith(caches.match(req).then((hit) => hit ?? fetch(req)));
+    return;
+  }
+  if (url.pathname === '/_/page') {
+    e.respondWith(withTimeout(fetch(req)).catch(async () => {
+      const s = await bundle();
+      const r = resolve(url.searchParams.get('p') ?? '/');
+      const p = s?.pages[r.kind === 'redirect' ? r.location : r.path];
+      if (!s || !p) return new Response('{}', { status: 404, headers: { 'content-type': 'application/json' } });
+      return new Response(JSON.stringify(pageData(p, stats)), { headers: { 'content-type': 'application/json' } });
+    }));
     return;
   }
   const isPage = req.mode === 'navigate' || url.pathname.endsWith('.md') || (req.headers.get('accept') ?? '').includes('text/html');

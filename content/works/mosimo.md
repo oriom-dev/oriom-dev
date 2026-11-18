@@ -24,4 +24,4 @@ stat: mosimo
 AT Protocol と Nostr の両方に載るので、既存のアプリが対応するだけで「もしもの通信網」の一部になれます。
 
 構成は Android アプリ、ESP32 / M5Stack の中継ノード、PDS 兼 Nostr リレー、AppView（HappyView）、Web クライアント、Rust / Tauri のシミュレーターです。
-私はプロトコル設計、組込の中継ノード、そして [このサイトと同じ VPS](/stats) で動いているサーバー群を担当しました。
+私はプロトコル設計、組込の中継ノード、そして [自前の VPS](/stats) で動いているサーバー群を担当しました。

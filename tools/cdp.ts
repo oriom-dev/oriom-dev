@@ -35,6 +35,12 @@ async function launch(extra: string[] = []) {
   const shot = async (file: string) => writeFileSync(file, Buffer.from((await send('Page.captureScreenshot')).data, 'base64'));
   const close = () => { sock.close(); proc.kill(); };
   await send('Page.enable'); await send('Runtime.enable'); await send('Log.enable'); await send('Network.enable');
+  // SIZE=390x844 (a phone: touch, DPR 2), DARK=1
+  const [w, h] = (process.env.SIZE ?? '1280x800').split('x').map(Number) as [number, number];
+  const phone = w < 600;
+  await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: phone ? 2 : 1, mobile: phone });
+  if (phone) await send('Emulation.setTouchEmulationEnabled', { enabled: true });
+  await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: process.env.DARK ? 'dark' : 'light' }] });
   const go = async (url: string, wait = 2500) => { await send('Page.navigate', { url }); await sleep(wait); };
   return { send, evalJs, shot, close, go, events };
 }

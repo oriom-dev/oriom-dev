@@ -20,6 +20,7 @@ export function readDoc(file: string): Doc {
 }
 
 function readDir(dir: string): Doc[] {
+  if (!existsSync(path.join(CONTENT, dir))) return [];
   return readdirSync(path.join(CONTENT, dir))
     .filter((f) => f.endsWith('.md'))
     .sort()

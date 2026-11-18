@@ -13,7 +13,6 @@ export const SOLID = (b: number) => b !== B.Air && b !== B.Water;
 export const OPAQUE = (b: number) => b !== B.Air && b !== B.Water;
 
 const FIXED_SEED = 20261118;
-export const PLAZA = 9; // radius of the flat plaza
 export const PLAZA_Y = 32; // its surface height
 
 export interface Column { h: number; top: number; filler: number; tree: number }
@@ -23,13 +22,17 @@ export class World {
   /** Blocks placed on top of the terrain (plaza furniture, lamps), by "x,y,z". */
   readonly overrides = new Map<string, number>();
 
-  constructor(seed = (Math.random() * 2 ** 31) | 0) {
+  /** Radius of the flat plaza; it grows with the number of signs. */
+  readonly plaza: number;
+
+  constructor(plaza = 9, seed = (Math.random() * 2 ** 31) | 0) {
+    this.plaza = plaza;
     this.seed = seed;
   }
 
   /** 0 at the spawn, 1 far away: how much of the per-visit random world shows. */
-  static blend(x: number, z: number): number {
-    return smoothstep(40, 140, Math.hypot(x, z));
+  blend(x: number, z: number): number {
+    return smoothstep(this.plaza + 30, this.plaza + 130, Math.hypot(x, z));
   }
 
   private shape(x: number, z: number, seed: number) {
@@ -44,14 +47,14 @@ export class World {
   }
 
   column(x: number, z: number): Column {
-    const w = World.blend(x, z);
+    const w = this.blend(x, z);
     const a = this.shape(x, z, FIXED_SEED);
     const s = w > 0 ? this.shape(x, z, this.seed) : a;
     let h = a.h + (s.h - a.h) * w;
     const temp = a.temp + (s.temp - a.temp) * w, wet = a.wet + (s.wet - a.wet) * w, mtn = a.mountain + (s.mountain - a.mountain) * w;
     // the plaza: flat in the middle, easing into the terrain
     const d = Math.hypot(x + 0.5, z + 0.5);
-    const p = smoothstep(PLAZA + 1, PLAZA + 14, d);
+    const p = smoothstep(this.plaza + 1, this.plaza + 14, d);
     h = PLAZA_Y + (h - PLAZA_Y) * p;
     const hi = Math.max(1, Math.min(H - 12, Math.floor(h)));
     let top: number = B.Grass, filler: number = B.Dirt;
@@ -59,11 +62,11 @@ export class World {
     else if (temp > 0.25 && wet < 0) { top = B.Sand; filler = B.Sand; } // desert
     if (hi > SEA + 26 || (temp < -0.3 && hi > SEA + 4)) top = B.Snow;
     if (mtn > 0.35 && hi > SEA + 18 && top !== B.Snow) { top = B.Stone; filler = B.Stone; }
-    if (d < PLAZA) { top = hash(x, z, 5) < 0.85 ? B.Gravel : B.Stone; filler = B.Stone; }
+    if (d < this.plaza) { top = hash(x, z, 5) < 0.85 ? B.Gravel : B.Stone; filler = B.Stone; }
     // trees: forests where it is wet, a few on plains, none on sand, snow peaks or the plaza
     const seed = w > 0.5 ? this.seed : FIXED_SEED;
     const forest = smoothstep(-0.1, 0.4, wet) * 0.07 + 0.004;
-    const tree = top === B.Grass && hi > SEA + 1 && d > PLAZA + 3 && hash(x, z, seed + 99) < forest ? 4 + Math.floor(hash(x, z, seed + 7) * 3) : 0;
+    const tree = top === B.Grass && hi > SEA + 1 && d > this.plaza + 3 && hash(x, z, seed + 99) < forest ? 4 + Math.floor(hash(x, z, seed + 7) * 3) : 0;
     return { h: hi, top, filler, tree };
   }
 

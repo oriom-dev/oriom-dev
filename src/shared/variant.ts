@@ -1,6 +1,6 @@
 import { VARIANTS, type Variant } from './types.ts';
 
-/** Cookie set by the 1D/2D pages once they detect neither WebGPU nor WebGL 2. */
+/** Cookie set by the 2D page once it detects neither WebGPU nor WebGL 2. */
 export const NO3D_COOKIE = 'no3d';
 
 const TEXT_BROWSERS = /\b(lynx|w3m|links|elinks|curl|wget|httpie|python|go-http|java|bot|crawl|spider|slurp|facebookexternalhit|bingpreview)\b/i;
@@ -16,7 +16,7 @@ export function maybe3d(userAgent: string | null | undefined, cookie: string | n
   return true;
 }
 
-/** `?v=1d|2d|3d` pins a variant (for sharing a specific look); otherwise uniform random. */
+/** `?v=2d|3d` pins a variant (for sharing a specific look); otherwise uniform random. */
 export function pickVariant(allow3d: boolean, forced?: string | null, rnd = Math.random): Variant {
   if (forced && (VARIANTS as readonly string[]).includes(forced)) return forced as Variant;
   const pool = allow3d ? VARIANTS : VARIANTS.filter((v) => v !== '3d');

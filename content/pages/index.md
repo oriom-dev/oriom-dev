@@ -1,6 +1,6 @@
 ---
 title: oriom
-description: oriom のポートフォリオ。Web・モバイル・バックエンド・インフラ、ときどき量子アニーリング。
+description: oriom のポートフォリオ。Web・モバイル・バックエンド・クラウド・セキュリティ、ときどき量子アニーリング。
 ---
 
 # oriom
@@ -22,10 +22,6 @@ Web、モバイル、バックエンド、クラウド、セキュリティ。�
 
 {{stats:summary}}
 
-## このサイトについて
-
-このページは、1 回のリクエストで完結し 512 KB に収まります。アクセスするたびに、[1 次元・2 次元・3 次元](/blog/three-dimensions) のどれかのデザインで表示されます。
-末尾に `.md` を付けると Markdown 版が返ります（このページは [/index.md](/index.md)）。
-HTTP/0.9 から HTTP/3、CoAP、Gopher、Gemini でも読めます。
+## リンク
 
 {{links}}

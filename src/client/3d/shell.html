@@ -1,18 +1,11 @@
-<canvas id="view" aria-hidden="true"></canvas>
-<header class="bar">
+<canvas id="view" aria-label="ブロックの世界。広場の看板から各ページを開けます。キーボードで歩けます。"></canvas>
+<header class="bar" id="home">
   <a class="name" href="/">oriom</a>
   <nav aria-label="サイト"><a href="/works">実績</a><a href="/blog">記事</a><a href="/badges">バッジ</a><a href="/stats">いま</a></nav>
-  <button type="button" id="read" class="btn">本文を読む</button>
+  <a class="btn tolist" href="__PATH__?v=2d" rel="nofollow">2 次元で見る</a>
 </header>
-<section id="reader" class="reader" aria-label="本文">
-  <div class="sheet">
-    <button type="button" class="close btn" aria-label="本文を閉じて世界に戻る">世界に戻る</button>
-    <main id="c"><!--@body--></main>
-    <footer class="end">ほかの次元で見る：<a href="__PATH__?v=1d" rel="nofollow">1 次元</a>・<a href="__PATH__?v=2d" rel="nofollow">2 次元</a>・<a href="__MD__">Markdown</a></footer>
-  </div>
-</section>
-
 <div class="cross" aria-hidden="true"></div>
 <p id="tip" class="tip" aria-live="polite"></p>
 <div class="touch" aria-hidden="true"><div id="joy" class="joy"><i></i></div><button type="button" id="jump" class="btn jump" tabindex="-1">▲</button></div>
-<!--#works-->
+<script type="application/json" id="items"><!--@items--></script>
+<!--#popup-->

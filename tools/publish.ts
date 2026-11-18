@@ -52,7 +52,7 @@ if (!cfg.publication) {
   const icon = dry ? undefined : (await xrpc(pds, 'com.atproto.repo.uploadBlob', { token, raw: { data: readFileSync(path.join(ROOT, 'dist/icon-512.png')), type: 'image/png' } })).blob;
   const record = {
     $type: 'site.standard.publication', url: ORIGIN, name: 'oriom',
-    description: 'oriom のポートフォリオと記事。1 次元・2 次元・3 次元のどれかで現れます。',
+    description: 'oriom のポートフォリオと記事。',
     ...(icon ? { icon } : {}), preferences: { showInDiscover: true },
   };
   if (dry) console.log('would create publication', record);
