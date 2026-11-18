@@ -152,6 +152,24 @@ export function postCanvas(it: Item): HTMLCanvasElement {
   return cv;
 }
 
+/** A board lying on the floor, its top towards -z (read from the spawn, facing north). */
+export function floorQuad(cx: number, y: number, cz: number, w: number, h: number): Float32Array {
+  const x0 = cx - w / 2, x1 = cx + w / 2, z0 = cz - h / 2, z1 = cz + h / 2;
+  return new Float32Array([x0, y, z1, 0, 1, x1, y, z1, 1, 1, x1, y, z0, 1, 0, x0, y, z0, 0, 0]);
+}
+
+/** One line of text on a plain board (labels on the floor, the note under the title). */
+export function textCanvas(text: string, W = 512, H = 96, size = 44): HTMLCanvasElement {
+  const cv = Object.assign(document.createElement('canvas'), { width: W, height: H });
+  const ctx = cv.getContext('2d')!;
+  frame(ctx, W, H);
+  ctx.fillStyle = css('--fg') || '#000';
+  ctx.font = `300 ${size}px ${FONT}`;
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, 28, H / 2 + 2, W - 56);
+  return cv;
+}
+
 /** A small plaque on a post: the year where a stretch of signs begins. */
 export function plaqueCanvas(text: string): HTMLCanvasElement {
   const W = 256, H = 128;

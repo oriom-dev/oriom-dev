@@ -9,10 +9,10 @@ import { boot, readStats } from '../common.ts';
 import { initPopup } from '../popup/popup.ts';
 import { webgl2 } from './gl.ts';
 import { webgpu } from './gpu.ts';
-import { ringLayout } from './layout.ts';
+import { FIRST_RING, firstSeat, ringLayout } from './layout.ts';
 import { forward, invert, mul, perspective, view } from './math.ts';
 import { meshChunk } from './mesh.ts';
-import { cardCanvas, htmlCanvas, plaqueCanvas, postCanvas, quadAt, type Sign, titleCard, workCanvas } from './panels.ts';
+import { cardCanvas, floorQuad, htmlCanvas, plaqueCanvas, postCanvas, quadAt, type Sign, textCanvas, titleCard, workCanvas } from './panels.ts';
 import { Player } from './player.ts';
 import type { Renderer } from './render.ts';
 import { UNIFORM_FLOATS } from './render.ts';
@@ -97,8 +97,18 @@ seq.forEach((it, k) => {
 });
 
 // redstone lamps on the floor between the spawn and the title sign: one row per node
-// for CPU and one for memory, ten lamps each
+// for CPU and one for memory, ten lamps each. A note under the title sign points down
+// at them, and a board on the floor at the left end of each row says what it shows.
 const LAMP_X0 = -4, LAMP_Z0 = -2;
+sign({ canvas: textCanvas('↓ 今のサーバーのリソース', 768, 96, 52), label: '', center: [0.5, PLAZA_Y + 1.32, -5], normal: [0, 0, 1], w: 4, h: 0.5, offset: 0.12 });
+const rowBoards: { id: number; quad: Float32Array; canvas: HTMLCanvasElement }[] = [];
+for (let row = 0; row < 4; row++) {
+  rowBoards.push({ id: 1000 + row, quad: floorQuad(LAMP_X0 - 1.75, PLAZA_Y + 1.02, LAMP_Z0 + row + 0.5, 3.3, 0.8), canvas: textCanvas('') });
+}
+const rowText = (s: Stats | null, row: number) => {
+  const n = s?.cluster?.nodes?.[row >> 1];
+  return n ? `${n.name} ${row % 2 ? 'メモリ' : 'CPU'}` : '';
+};
 
 const FOVY = 1.15;
 /** How far back to stand so a sign `w` wide whose top is `top` fits the screen both
@@ -110,14 +120,14 @@ const fitDistance = (w: number, top: number) => {
   return Math.max(3.4, across, up);
 };
 const topOf = (s: Sign) => s.center[1]! + s.h / 2;
-// the spawn: the whole title sign in view, and on wide screens the two signs beside it
-// too (whole, not cut off at the edges)
-const front = (x: Sign) => Math.atan2(-(x.center[0]! - 0.5), -x.center[2]!); // 0 = straight ahead
-const left = itemSigns.filter((x) => front(x) > 0).sort((a, b) => front(a) - front(b))[0];
-const right = itemSigns.filter((x) => front(x) < 0).sort((a, b) => front(b) - front(a))[0];
-const besides = [left, right].filter((x): x is Sign => !!x).map((x) => Math.abs(x.center[0]! - titleSign.center[0]!) + x.w / 2);
-const spanW = innerWidth > innerHeight * 1.2 && besides.length ? 2 * Math.max(titleSign.w / 2, ...besides) : titleSign.w;
-player.p = [0.5, PLAZA_Y + 1, titleSign.center[2]! + fitDistance(spanW, topOf(titleSign))];
+// the spawn: in front of the title sign, always the same place whatever the content.
+// On wide screens far enough back that the seats beside the title sign (the first
+// arc's nearest seats, fixed by the layout) are whole in view; never past the first arc.
+const seat = firstSeat();
+const spanW = innerWidth > innerHeight * 1.2 ? 2 * (Math.abs(seat.x) + 1.2 + 0.6) : titleSign.w;
+const spawnZ = Math.min(titleSign.center[2]! + fitDistance(spanW, topOf(titleSign)), FIRST_RING - 3);
+player.p = [0.5, PLAZA_Y + 1, spawnZ];
+player.yaw = 0;
 
 /** Opened by URL: stand in front of that page's sign (the popup is already open). */
 function spawnAt(path: string): void {
@@ -146,6 +156,12 @@ function applyStats(s: Stats | null): void {
     }
   }
   titleSign.canvas = cardCanvas(card, s.views != null ? `訪問 ${nf.format(s.views)}` : '');
+  rowBoards.forEach((b, row) => {
+    const t = rowText(s, row);
+    if (!t) return;
+    b.canvas = textCanvas(t, 512, 124, 46);
+    renderer?.setPanel(b.id, b.quad, b.canvas);
+  });
   items.forEach((it, i) => {
     if (!it.stat) return;
     const sg = itemSigns[i]!;

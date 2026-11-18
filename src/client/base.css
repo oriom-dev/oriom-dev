@@ -16,8 +16,8 @@ code{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:.9em}
 /* the header, the same in 2D and 3D: the name on the left; the cluster's meters and the
    other dimension on the right */
 .bar{display:flex;align-items:center;gap:.5rem 1rem}
-.bar .name{font-weight:400;letter-spacing:.06em;text-decoration:none;margin-right:auto}
-.switch{display:inline-grid;place-items:center;min-width:2.6rem;height:1.9rem;padding:0 .6rem;border-radius:999px;background:var(--bg);color:var(--fg);border:1px solid var(--line);text-decoration:none;font-weight:400;font-size:.85em;letter-spacing:.05em}
+.bar .name{font-weight:400;letter-spacing:.06em;text-decoration:none;margin-right:auto;white-space:nowrap}
+.switch{flex:none;white-space:nowrap;display:inline-grid;place-items:center;min-width:2.6rem;height:1.9rem;padding:0 .6rem;border-radius:999px;background:var(--bg);color:var(--fg);border:1px solid var(--line);text-decoration:none;font-weight:400;font-size:.85em;letter-spacing:.05em}
 .switch:hover{background:color-mix(in oklch,var(--line) 15%,var(--bg))}
 .meters-link{text-decoration:none;color:inherit}
 dl.meters{display:flex;gap:.9rem;margin:0;font-size:.7rem;line-height:1}
@@ -27,3 +27,5 @@ dl.meters dd{margin:0;display:flex;align-items:center;gap:.25rem;font-size:1em}
 dl.meters .lbl{color:var(--muted);font-size:.85em;width:2.6em;white-space:nowrap}
 dl.meters i{display:block;width:2.6rem;height:.4rem;border-radius:2px;background:linear-gradient(90deg,var(--line) var(--v),color-mix(in oklch,var(--line) 18%,transparent) var(--v))}
 kbd{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:.85em;padding:.05rem .35rem;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;background:var(--bg);color:var(--fg)}
+dl.meters dt,dl.meters .lbl{white-space:nowrap}
+@media (max-width:30rem){dl.meters{gap:.5rem}dl.meters dt,dl.meters .lbl{display:none}dl.meters div{grid-template-columns:auto}dl.meters i{width:1.6rem}.bar{gap:.5rem .6rem}}

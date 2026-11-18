@@ -11,6 +11,15 @@ export const RING_STEP = 7;
 export const SPACING = 3.6; // sign width 2.4 + a gap
 export const FRONT_GAP = 0.2 * Math.PI; // either side of straight ahead (-z), around the title sign
 
+/** The seat of the first arc nearest the title sign, left of it (x < 0). The same however
+ *  many signs there are, so the spawn never depends on the content. */
+export function firstSeat(): { x: number; z: number } {
+  const arc = 2 * Math.PI - 2 * FRONT_GAP;
+  const cap = Math.max(1, Math.floor((FIRST_RING * arc) / SPACING));
+  const ang = FRONT_GAP + (0.5 * arc) / cap;
+  return { x: -Math.sin(ang) * FIRST_RING, z: -Math.cos(ang) * FIRST_RING };
+}
+
 export function ringLayout(n: number): { slots: Slot[]; plaza: number } {
   const slots: Slot[] = [];
   let ring = 0;
