@@ -283,21 +283,32 @@ document.addEventListener('mousemove', (e) => {
   player.yaw -= e.movementX * 0.0025;
   player.pitch = Math.max(-1.55, Math.min(1.55, player.pitch - e.movementY * 0.0025));
 });
+function moveStick(x: number, y: number): void {
+  const dx = x - joy.ox, dy = y - joy.oy, l = Math.max(50, Math.hypot(dx, dy));
+  joy.x = dx / l; joy.y = -dy / l;
+  document.querySelector<HTMLElement>('#joy i')!.style.transform = `translate(${joy.x * 40}px,${-joy.y * 40}px)`;
+}
 canvas.addEventListener('pointerdown', (e) => {
   if (locked()) { if (e.button === 0) activate(aimed()); return; } // the crosshair picks
   // a click on a sign opens it (on release); any other click hands the mouse to the view
   if (e.pointerType === 'mouse' && !aimed(e.clientX, e.clientY)) { lockMouse(); return; }
-  canvas.setPointerCapture(e.pointerId);
+  try { canvas.setPointerCapture(e.pointerId); } catch { /* a pointer already gone: still steer */ }
   if (e.pointerType === 'mouse') { if (e.button === 0) look = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: 0 }; return; }
-  if (e.clientX < innerWidth / 2 && joy.id < 0) { joy.id = e.pointerId; joy.ox = e.clientX; joy.oy = e.clientY; }
+  if (e.clientX < innerWidth / 2 && joy.id < 0) {
+    // on the drawn stick its centre is the origin (the knob follows the finger); elsewhere
+    // on the left half, wherever the finger lands
+    const r = document.getElementById('joy')!.getBoundingClientRect();
+    const onStick = Math.hypot(e.clientX - (r.left + r.right) / 2, e.clientY - (r.top + r.bottom) / 2) <= r.width / 2 + 16;
+    joy.id = e.pointerId;
+    joy.ox = onStick ? (r.left + r.right) / 2 : e.clientX;
+    joy.oy = onStick ? (r.top + r.bottom) / 2 : e.clientY;
+    moveStick(e.clientX, e.clientY);
+  }
   else look = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: 0 };
 });
 canvas.addEventListener('pointermove', (e) => {
   if (e.pointerId === joy.id) {
-    const dx = e.clientX - joy.ox, dy = e.clientY - joy.oy, l = Math.max(50, Math.hypot(dx, dy));
-    joy.x = dx / l; joy.y = -dy / l;
-    const knob = document.querySelector<HTMLElement>('#joy i')!;
-    knob.style.transform = `translate(${joy.x * 40}px,${-joy.y * 40}px)`;
+    moveStick(e.clientX, e.clientY);
   } else if (look && e.pointerId === look.id) {
     const k = e.pointerType === 'mouse' ? 0.004 : 0.006;
     player.yaw -= (e.clientX - look.x) * k;

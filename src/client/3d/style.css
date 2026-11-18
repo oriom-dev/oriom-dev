@@ -16,7 +16,7 @@ html:not(.world) .html-canvas{position:fixed;left:-200vw;top:0}
 html.world:not(.popped) .cross{display:block;position:fixed;left:50%;top:50%;width:14px;height:14px;margin:-7px;z-index:1;pointer-events:none;background:linear-gradient(var(--fg),var(--fg)) center/2px 100% no-repeat,linear-gradient(var(--fg),var(--fg)) center/100% 2px no-repeat;opacity:.7}
 html.world:not(.popped) .tip:not(:empty){display:block;position:fixed;left:50%;top:calc(50% + 1.5rem);transform:translateX(-50%);z-index:1;margin:0;padding:.2rem .8rem;border-radius:999px;background:color-mix(in oklch,var(--bg) 85%,transparent);font-size:.9em;pointer-events:none;white-space:nowrap}
 @media (pointer:coarse){html.world:not(.popped) .touch{display:block}}
-.joy{position:fixed;left:1.25rem;bottom:1.5rem;z-index:1;width:7.5rem;height:7.5rem;border:1px solid var(--line);border-radius:50%;background:color-mix(in oklch,var(--bg) 40%,transparent)}
+.joy{position:fixed;left:1.25rem;bottom:1.5rem;z-index:1;pointer-events:none;width:7.5rem;height:7.5rem;border:1px solid var(--line);border-radius:50%;background:color-mix(in oklch,var(--bg) 40%,transparent)}
 .joy i{position:absolute;left:50%;top:50%;width:2.75rem;height:2.75rem;margin:-1.375rem;border-radius:50%;background:color-mix(in oklch,var(--line) 60%,transparent)}
 .jump{position:fixed;right:1.25rem;bottom:5.5rem;z-index:1;width:3.5rem;height:3.5rem;padding:0}
 /* the status bar: which way you face, and what the keys do right now */
