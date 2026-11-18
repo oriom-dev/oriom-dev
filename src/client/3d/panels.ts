@@ -42,23 +42,41 @@ function frame(ctx: CanvasRenderingContext2D, W: number, H: number): void {
   ctx.strokeRect(10, 10, W - 20, H - 20);
 }
 
-/** The page's own content on the big sign. */
-export function pageCanvas(main: HTMLElement): HTMLCanvasElement {
+const NOTES = {
+  desktop: ['WASD・矢印キーで歩く／ドラッグで見回す', 'Space でジャンプ／F で飛ぶ', '看板をクリックすると開きます', 'この看板をクリックすると本文を読めます'],
+  touch: ['左下をドラッグして歩く／右側をドラッグで見回す', '▲ でジャンプ', '看板をタップすると開きます', 'この看板をタップすると本文を読めます'],
+};
+
+/** The title card: what is in view first. A real element, so HTML-in-Canvas can paint it. */
+export function titleCard(title: string, touch: boolean): HTMLElement {
+  const el = document.createElement('div');
+  el.className = 'title-card';
+  const h = document.createElement('p');
+  h.className = 't';
+  h.textContent = title;
+  const ul = document.createElement('ul');
+  for (const n of NOTES[touch ? 'touch' : 'desktop']) ul.append(Object.assign(document.createElement('li'), { textContent: n }));
+  el.append(h, ul);
+  return el;
+}
+
+/** The same card drawn by hand, for browsers without HTML-in-Canvas. */
+export function cardCanvas(card: HTMLElement): HTMLCanvasElement {
   const W = 1024, H = 768;
   const cv = Object.assign(document.createElement('canvas'), { width: W, height: H });
   const ctx = cv.getContext('2d')!;
   frame(ctx, W, H);
   ctx.fillStyle = css('--fg') || '#000';
   ctx.textBaseline = 'top';
-  const h1 = main.querySelector('h1')?.textContent ?? document.title;
-  ctx.font = `300 54px ${FONT}`;
-  let y = wrap(ctx, h1, 56, 50, W - 112, 64, 200) + 10;
-  ctx.font = `300 26px ${FONT}`;
-  const text = [...main.querySelectorAll('p,li,h2,blockquote,dd')].map((e) => e.textContent?.trim()).filter(Boolean).join('\n');
-  y = wrap(ctx, text, 56, y, W - 112, 38, H - 110);
+  ctx.font = `200 76px ${FONT}`;
+  const y = wrap(ctx, card.querySelector('.t')?.textContent ?? '', 72, 96, W - 144, 92, 380);
+  ctx.strokeStyle = css('--line') || '#888';
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(72, y + 24); ctx.lineTo(W - 72, y + 24); ctx.stroke();
   ctx.fillStyle = css('--muted') || '#666';
-  ctx.font = `400 24px ${FONT}`;
-  ctx.fillText('クリック / Enter で全文を読む', 56, H - 66);
+  ctx.font = `300 32px ${FONT}`;
+  let ly = y + 64;
+  for (const li of card.querySelectorAll('li')) { ctx.fillText(li.textContent ?? '', 72, ly, W - 144); ly += 52; }
   return cv;
 }
 
@@ -105,11 +123,10 @@ export function labelCanvas(text: string, sub = ''): HTMLCanvasElement {
 }
 
 /**
- * HTML-in-Canvas: when supported, the real <main> lives inside a `<canvas layoutsubtree>`
- * and is painted into it, so the sign is the accessible DOM itself. Returns null when
- * the API is missing.
+ * HTML-in-Canvas: when supported, the title card is a real element inside a
+ * `<canvas layoutsubtree>` and is painted from the DOM. Returns null when the API is missing.
  */
-export function htmlCanvas(main: HTMLElement, onPaint: (c: HTMLCanvasElement) => void): HTMLCanvasElement | null {
+export function htmlCanvas(el: HTMLElement, onPaint: (c: HTMLCanvasElement) => void): HTMLCanvasElement | null {
   const proto = CanvasRenderingContext2D.prototype as any;
   const draw = proto.drawElementImage ?? proto.drawElement;
   if (!draw) return null;
@@ -117,13 +134,14 @@ export function htmlCanvas(main: HTMLElement, onPaint: (c: HTMLCanvasElement) =>
   cv.setAttribute('layoutsubtree', '');
   cv.width = 1024; cv.height = 768;
   cv.className = 'html-canvas';
-  main.before(cv);
-  cv.append(main);
+  cv.setAttribute('aria-hidden', 'true'); // the same title is in the header and the reader
+  document.body.append(cv);
+  cv.append(el);
   const ctx = cv.getContext('2d')!;
   const paint = () => {
     try {
       frame(ctx, cv.width, cv.height);
-      draw.call(ctx, main, 40, 40);
+      draw.call(ctx, el, 0, 0);
       onPaint(cv);
     } catch { /* API shape changed: keep the hand-drawn sign */ }
   };

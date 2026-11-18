@@ -9,7 +9,7 @@ import { webgl2 } from './gl.ts';
 import { webgpu } from './gpu.ts';
 import { forward, invert, mul, perspective, view } from './math.ts';
 import { meshChunk } from './mesh.ts';
-import { htmlCanvas, labelCanvas, pageCanvas, quadAt, type Sign, workCanvas } from './panels.ts';
+import { cardCanvas, htmlCanvas, labelCanvas, quadAt, type Sign, titleCard, workCanvas } from './panels.ts';
 import { Player } from './player.ts';
 import type { Renderer } from './render.ts';
 import { UNIFORM_FLOATS } from './render.ts';
@@ -27,20 +27,16 @@ const mobile = matchMedia('(pointer:coarse)').matches;
 const hue = Number(root.style.getPropertyValue('--h')) || 220;
 
 // ---------------------------------------------------------------- reader
-let playing = false;
 function openReader(): void {
-  if (main.parentElement !== sheet) sheet.querySelector('.close')!.after(main);
   root.classList.add('reading');
-  stopPlaying();
-  $('start').hidden = true;
+  keys.clear();
   (main.querySelector('h1') as HTMLElement | null)?.focus?.();
 }
 function closeReader(): void {
   root.classList.remove('reading');
-  $('start').hidden = false;
+  canvas.focus({ preventScroll: true });
 }
 $('read').onclick = openReader;
-$('read2').onclick = openReader;
 sheet.querySelector<HTMLButtonElement>('.close')!.onclick = closeReader;
 main.querySelector('h1')?.setAttribute('tabindex', '-1');
 
@@ -61,8 +57,10 @@ const sign = (s: Omit<Sign, 'id' | 'quad'>) => {
 };
 const post = (x: number, z: number, top: number) => { for (let y = PLAZA_Y + 1; y <= top; y++) world.overrides.set(`${x},${y},${z}`, B.Log); };
 
-// the page itself, facing the spawn
-const pageSign = sign({ canvas: pageCanvas(main), reader: true, label: '本文を読む', center: [0.5, PLAZA_Y + 4.2, -6], normal: [0, 0, 1], w: 6, h: 4.5 });
+// the first thing in view: the page title and how to move; clicking it opens the page
+const title = main.querySelector('h1')?.textContent?.trim() || document.title;
+const card = titleCard(title, mobile);
+const pageSign = sign({ canvas: cardCanvas(card), reader: true, label: '本文を読む', center: [0.5, PLAZA_Y + 4.2, -6], normal: [0, 0, 1], w: 6, h: 4.5 });
 post(-2, -7, PLAZA_Y + 2); post(2, -7, PLAZA_Y + 2);
 
 // works in an arc around the plaza
@@ -162,48 +160,24 @@ const joy = { x: 0, y: 0, id: -1, ox: 0, oy: 0 };
 let look: { id: number; x: number; y: number; moved: number } | null = null;
 let jumpHeld = false;
 
-function startPlaying(): void {
-  playing = true;
-  root.classList.add('playing');
-  $('start').hidden = true;
-  if (!mobile) canvas.requestPointerLock?.();
-}
-function stopPlaying(): void {
-  playing = false;
-  root.classList.remove('playing');
-  if (document.pointerLockElement) document.exitPointerLock();
-  keys.clear();
-}
-$('go').onclick = startPlaying;
-document.addEventListener('pointerlockchange', () => {
-  if (!document.pointerLockElement && playing && !mobile) { stopPlaying(); if (!root.classList.contains('reading')) $('start').hidden = false; }
-});
 document.addEventListener('keydown', (e) => {
   if (root.classList.contains('reading')) { if (e.key === 'Escape') closeReader(); return; }
-  if (!playing) return;
+  if (!root.classList.contains('playing') || e.altKey || e.ctrlKey || e.metaKey) return;
+  if ((e.target as Element).closest?.('a,button,input,textarea')) return;
   keys.add(e.code);
   if (e.code === 'KeyF') player.fly = !player.fly;
   if (e.code === 'Enter' || e.code === 'KeyE') activate(aimed());
   if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
 });
 document.addEventListener('keyup', (e) => keys.delete(e.code));
-document.addEventListener('mousemove', (e) => {
-  if (document.pointerLockElement !== canvas) return;
-  player.yaw -= e.movementX * 0.0025;
-  player.pitch = Math.max(-1.55, Math.min(1.55, player.pitch - e.movementY * 0.0025));
-});
-canvas.addEventListener('click', () => {
-  if (mobile) return;
-  if (!playing) startPlaying();
-  else if (document.pointerLockElement === canvas) activate(aimed());
-});
 // keyboard users who tab into the content get the reader
 main.addEventListener('focusin', () => { if (!root.classList.contains('reading')) openReader(); });
 
-// touch: left half moves (joystick), right half looks, a tap opens what it hits
+// mouse: drag to look, click to open. touch: the left half is a joystick, the right
+// half looks around; a tap opens what it hits.
 canvas.addEventListener('pointerdown', (e) => {
-  if (e.pointerType === 'mouse') return;
-  if (!playing) startPlaying();
+  canvas.setPointerCapture(e.pointerId);
+  if (e.pointerType === 'mouse') { if (e.button === 0) look = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: 0 }; return; }
   if (e.clientX < innerWidth / 2 && joy.id < 0) { joy.id = e.pointerId; joy.ox = e.clientX; joy.oy = e.clientY; }
   else look = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: 0 };
 });
@@ -214,8 +188,9 @@ canvas.addEventListener('pointermove', (e) => {
     const knob = document.querySelector<HTMLElement>('#joy i')!;
     knob.style.transform = `translate(${joy.x * 40}px,${-joy.y * 40}px)`;
   } else if (look && e.pointerId === look.id) {
-    player.yaw -= (e.clientX - look.x) * 0.006;
-    player.pitch = Math.max(-1.55, Math.min(1.55, player.pitch - (e.clientY - look.y) * 0.006));
+    const k = e.pointerType === 'mouse' ? 0.004 : 0.006;
+    player.yaw -= (e.clientX - look.x) * k;
+    player.pitch = Math.max(-1.55, Math.min(1.55, player.pitch - (e.clientY - look.y) * k));
     look.moved += Math.abs(e.clientX - look.x) + Math.abs(e.clientY - look.y);
     look.x = e.clientX; look.y = e.clientY;
   }
@@ -276,13 +251,14 @@ async function start(): Promise<void> {
     document.cookie = `${NO3D_COOKIE}=1;path=/;max-age=31536000;samesite=lax;secure`;
     return; // the reader stays open: still the whole page
   }
-  root.classList.add('world');
+  root.classList.add('world', 'playing');
   root.dataset.renderer = renderer.kind;
-  $('start').hidden = false;
+  canvas.tabIndex = 0;
+  canvas.focus({ preventScroll: true });
   const r = renderer;
   for (const s of signs) r.setPanel(s.id, s.quad, s.canvas);
   // HTML-in-Canvas: when available the big sign shows the live DOM itself
-  htmlCanvas(main, (cv) => r.setPanel(pageSign.id, pageSign.quad, cv));
+  htmlCanvas(card, (cv) => r.setPanel(pageSign.id, pageSign.quad, cv));
   applyStats(readStats());
   document.addEventListener('stats', (e) => applyStats((e as CustomEvent<Stats>).detail));
 
@@ -301,7 +277,7 @@ async function start(): Promise<void> {
   const frame = (now: number) => {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
-    if (playing) {
+    if (!root.classList.contains('reading')) {
       const k = (c: string) => (keys.has(c) ? 1 : 0);
       const mx = k('KeyD') + k('ArrowRight') - k('KeyA') - k('ArrowLeft') + joy.x;
       const mz = k('KeyW') + k('ArrowUp') - k('KeyS') - k('ArrowDown') + joy.y;
