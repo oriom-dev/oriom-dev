@@ -8,37 +8,58 @@ const env = process.env;
 const [host, port] = (env.LISTEN ?? '127.0.0.1:8080').split(/:(?=\d+$)/) as [string, string];
 const counter = new Counter(env.STATE_DIR ? `${env.STATE_DIR}/counter.json` : undefined);
 const stats = startStats(counter, { agentSocket: env.CLUSTER_AGENT_SOCKET });
-const app = new App(counter, stats);
+const app = new App(counter, stats, undefined, env.ADMIN_PATH ?? '');
 if (env.NODE_ENV === 'development') app.watch();
 
-// Run-time pages: posts from followed standard.site publications, and the Bluesky
-// replies under every post. Only the pages are rebuilt, never the templates.
+// Run-time pages: the site's own posts (on its PDS, written from the admin page), posts
+// from followed standard.site publications, and the Bluesky replies under every post.
+// Only the pages are rebuilt, never the templates.
 if (env.FEEDS !== '0') {
   const { fetchFollowed } = await import('./feeds.ts');
+  const { fetchOwn } = await import('./own.ts');
   const { fetchComments } = await import('./comments.ts');
   const { buildPages } = await import('../build/pages.ts');
-  const { loadPosts, loadStandard, loadWorks } = await import('../build/content.ts');
+  const { setPublication } = await import('../build/render.ts');
+  const { loadStandard, loadWorks } = await import('../build/content.ts');
+  let own: import('./own.ts').Own | null = null; // the last good read: a PDS hiccup keeps the posts
   const refresh = async () => {
+    try { own = await fetchOwn(); } catch (e) { console.warn('own posts:', (e as Error).message); }
     const team = await fetchFollowed(loadStandard().follow);
-    const posts = [...loadPosts(), ...team].sort((a, b) => b.date.localeCompare(a.date));
+    const posts = [...(own?.posts ?? []), ...team].sort((a, b) => b.date.localeCompare(a.date));
     const comments: import('../shared/types.ts').Comments = {};
     for (const p of posts) {
       if (!p.bsky) continue;
       try { comments[p.path] = await fetchComments(p.bsky.uri); } catch (e) { console.warn(`comments ${p.path}:`, (e as Error).message); }
     }
+    setPublication(own?.publication ?? '');
+    app.publication = own?.publication ?? '';
     app.setPages(buildPages(loadWorks(), posts, comments));
   };
-  const tick = () => refresh().catch((e) => console.warn('refresh:', e));
-  tick();
+  // one refresh at a time; a request while one runs queues exactly one more
+  let running: Promise<void> | null = null, again = false;
+  const tick = (): Promise<void> => {
+    if (running) { again = true; return running; }
+    running = refresh().catch((e) => console.warn('refresh:', e)).finally(() => {
+      running = null;
+      if (again) { again = false; void tick(); }
+    });
+    return running;
+  };
+  void tick();
   setInterval(tick, 10 * 60_000).unref();
+  app.onRefresh = () => void tick(); // the admin page asks after it writes
 }
 
-// Behind Caddy: trust X-Forwarded-For only from loopback.
+// Behind Caddy: trust X-Forwarded-For and -Proto only from loopback.
+const loopback = (req: http.IncomingMessage) => /^(::ffff:)?127\.|^::1$/.test(req.socket.remoteAddress ?? '');
 const clientOf = (req: http.IncomingMessage) => {
   const remote = req.socket.remoteAddress ?? '';
   const fwd = req.headers['x-forwarded-for'];
-  return /^(::ffff:)?127\.|^::1$/.test(remote) && typeof fwd === 'string' ? fwd.split(',')[0]!.trim() : remote;
+  return loopback(req) && typeof fwd === 'string' ? fwd.split(',')[0]!.trim() : remote;
 };
+/** Over TLS: Caddy says so; in development, a browser on this machine (a secure context). */
+const secureOf = (req: http.IncomingMessage) =>
+  loopback(req) && (req.headers['x-forwarded-proto'] === 'https' || (env.NODE_ENV === 'development' && !req.headers['x-forwarded-for']));
 
 const server = http.createServer((req, res) => {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
@@ -52,6 +73,7 @@ const server = http.createServer((req, res) => {
     cookie: req.headers.cookie,
     accept: req.headers.accept,
     client: clientOf(req),
+    secure: secureOf(req),
     protocol: 'http',
   };
   let reply: Reply;

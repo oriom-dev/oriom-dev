@@ -2,10 +2,15 @@ import { Marked } from 'marked';
 import { separatePath, type Art } from '../shared/art.ts';
 import { mdPath } from '../shared/routes.ts';
 import type { Badge, Comment, Comments, Item, PageOut, Post, Work } from '../shared/types.ts';
-import { AUTHOR, loadStandard } from './content.ts';
+import { AUTHOR } from './content.ts';
 
-export const ORIGIN = 'https://oriom.dev';
-export const PUBLICATION_URI = process.env.PUBLICATION_URI || loadStandard().publication;
+export { ORIGIN } from '../shared/standard.ts';
+import { ORIGIN } from '../shared/standard.ts';
+/** The site's site.standard.publication record: read from the PDS at run time (the
+ *  server sets it before it builds the pages), so every page can link to it. */
+let publicationUri = '';
+export const setPublication = (uri: string) => { publicationUri = uri; };
+export const publication = () => publicationUri;
 
 const marked = new Marked({ gfm: true, async: false });
 /** Links to other sites open in a new tab. */
@@ -192,7 +197,7 @@ export function head(m: HeadMeta): string {
     `<meta property="og:site_name" content="${SITE}">`,
     m.published ? `<meta property="article:published_time" content="${m.published}">` : '',
     m.atUri ? `<link rel="site.standard.document" href="${esc(m.atUri)}">` : '',
-    PUBLICATION_URI ? `<link rel="site.standard.publication" href="${esc(PUBLICATION_URI)}">` : '',
+    publicationUri ? `<link rel="site.standard.publication" href="${esc(publicationUri)}">` : '',
   ].join('');
 }
 

@@ -48,8 +48,10 @@ for (const [path, page] of Object.entries(site.pages)) {
 
 test('a post with the maximum number of comments still fits', async () => {
   const { buildPages } = await import('../src/build/pages.ts');
-  const { loadPosts, loadWorks } = await import('../src/build/content.ts');
-  const posts = loadPosts().map((p) => ({ ...p, bsky: { uri: 'at://did:plc:x/app.bsky.feed.post/y', cid: 'c' } }));
+  const { AUTHOR, loadWorks } = await import('../src/build/content.ts');
+  // a long post (about 40 000 characters, a long article) with a full comment section
+  const body = Array.from({ length: 200 }, (_, i) => `## 見出し ${i}\n\n${'本文の段落です。'.repeat(25)}`).join('\n\n');
+  const posts = [{ slug: 'long', path: '/blog/long', title: '長い記事', date: '2026-11-18', description: '概要', tags: ['a'], body, author: AUTHOR, bsky: { uri: 'at://did:plc:x/app.bsky.feed.post/y', cid: 'c' } }];
   const long = 'あ'.repeat(300); // Bluesky posts are at most 300 graphemes
   const c = (i: number) => ({ uri: `at://x/${i}`, url: 'https://bsky.app/profile/x/post/y', author: { did: 'did:plc:x', handle: 'someone.example.com', name: 'な'.repeat(64) }, at: '2026-11-18', text: [{ t: long }], likes: 0, replies: [] });
   const comments = Object.fromEntries(posts.map((p) => [p.path, { url: 'https://bsky.app/profile/x/post/y', count: 999, comments: Array.from({ length: 150 }, (_, i) => c(i)) }]));

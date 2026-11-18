@@ -23,7 +23,7 @@
             fileset = pkgs.lib.fileset.unions [ ./package.json ./package-lock.json ./tsconfig.json ./src ./content ./test ];
           };
           nodejs = pkgs.nodejs_24;
-          npmDepsHash = "sha256-l0VFaeZKRwdYxGANom8ZKmuPWqHtBH0L/DDkb4PDbiQ=";
+          npmDepsHash = "sha256-lQmUPiDxb+xCvpgIqWz5DnwENjFKInfaHqu4pj74cC8=";
           npmFlags = [ "--ignore-scripts" ];
           doCheck = true;
           checkPhase = "npm test";

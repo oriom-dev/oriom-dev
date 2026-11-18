@@ -2,7 +2,8 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import type { Art } from '../shared/art.ts';
-import type { Badge, Post, Work } from '../shared/types.ts';
+import { AUTHOR_DID } from '../shared/standard.ts';
+import type { Badge, Work } from '../shared/types.ts';
 
 export const ROOT = path.resolve(import.meta.dirname, '../..');
 const CONTENT = path.join(ROOT, 'content');
@@ -63,32 +64,13 @@ export function loadBadges(): Badge[] {
   return order.map(({ slug }) => ({ ...JSON.parse(readFileSync(path.join(dir, `${slug}.json`), 'utf8')), art: loadArt(`badge-${slug}`) }));
 }
 
+/** Other standard.site publications whose posts are shown here. The site's own posts
+ *  live on its PDS (written from the admin page) and are read at run time. */
 export interface StandardConfig {
-  publication: string;
-  documents: Record<string, { uri: string; hash: string; bsky?: { uri: string; cid: string } }>;
   follow: { handle: string; name: string }[];
 }
 export const loadStandard = (): StandardConfig => JSON.parse(readFileSync(path.join(CONTENT, 'standard.json'), 'utf8'));
 
-export const AUTHOR = { name: 'oriom', handle: 'oriom.dev', did: 'did:plc:p4woeawvwwrsvh6mjp5cvufu' };
-
-export function loadPosts(): Post[] {
-  const standard = loadStandard();
-  return readDir('posts')
-    .map(({ name, meta, body }) => ({
-      slug: name,
-      path: `/blog/${name}`,
-      title: String(meta.title),
-      date: day(meta.date)!,
-      updated: day(meta.updated),
-      description: String(meta.description ?? ''),
-      tags: meta.tags ?? [],
-      body,
-      author: AUTHOR,
-      atUri: standard.documents[name]?.uri,
-      bsky: standard.documents[name]?.bsky,
-    }))
-    .sort((a, b) => b.date.localeCompare(a.date));
-}
+export const AUTHOR = { name: 'oriom', handle: 'oriom.dev', did: AUTHOR_DID };
 
 export const loadPages = () => readDir('pages');

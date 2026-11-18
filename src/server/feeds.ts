@@ -12,13 +12,17 @@ const get = async (url: string) => {
 
 export async function resolve(handle: string): Promise<{ did: string; pds: string }> {
   const did = (await (await get(`https://public.api.bsky.app/xrpc/com.atproto.identity.resolveHandle?handle=${encodeURIComponent(handle)}`)).json()).did as string;
-  const doc = await (await get(did.startsWith('did:web:') ? `https://${did.slice(8)}/.well-known/did.json` : `https://plc.directory/${did}`)).json();
-  const pds = doc.service?.find((s: any) => s.id.endsWith('#atproto_pds'))?.serviceEndpoint;
-  if (!pds) throw new Error(`${handle}: no PDS`);
-  return { did, pds };
+  return { did, pds: await pdsOf(did) };
 }
 
-async function listRecords(pds: string, did: string, collection: string): Promise<{ uri: string; value: any }[]> {
+export async function pdsOf(did: string): Promise<string> {
+  const doc = await (await get(did.startsWith('did:web:') ? `https://${did.slice(8)}/.well-known/did.json` : `https://plc.directory/${did}`)).json();
+  const pds = doc.service?.find((s: any) => s.id.endsWith('#atproto_pds'))?.serviceEndpoint;
+  if (!pds) throw new Error(`${did}: no PDS`);
+  return pds;
+}
+
+export async function listRecords(pds: string, did: string, collection: string): Promise<{ uri: string; value: any }[]> {
   const out: { uri: string; value: any }[] = [];
   let cursor = '';
   for (let page = 0; page < 20; page++) {

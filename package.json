@@ -20,11 +20,13 @@
     "typescript": "5.9.3"
   },
   "dependencies": {
+    "@atproto/oauth-client-browser": "0.5.14",
     "coap": "1.6.0",
     "marked": "18.2.1",
     "yaml": "2.9.1"
   },
   "allowScripts": {
-    "esbuild": false
+    "esbuild": false,
+    "core-js": false
   }
 }

@@ -1,6 +1,7 @@
 // Minimal Chrome DevTools Protocol driver for end-to-end checks (no Puppeteer).
 //   nix shell nixpkgs#chromium -c node tools/cdp.ts offline   # service worker offline test
 //   nix shell nixpkgs#chromium -c node tools/cdp.ts console /?v=3d   # console output of a page
+//   EVAL='…' nix shell nixpkgs#chromium -c node tools/cdp.ts flow /path   # run EVAL, follow where the page goes
 import { spawn } from 'node:child_process';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -63,6 +64,18 @@ try {
     await b.go(`${BASE}/blog.md`, 1200);
     console.log('offline /blog.md:', JSON.stringify((await b.evalJs('document.body.innerText')).slice(0, 40)));
     await b.shot(path.join(OUT, 'offline.png'));
+  } else if (mode === 'flow') {
+    await b.go(`${BASE}${arg ?? '/'}`, Number(process.env.WAIT ?? 4000));
+    if (process.env.EVAL) await b.send('Runtime.evaluate', { expression: process.env.EVAL }); // may navigate away
+    await sleep(Number(process.env.AFTER ?? 6000));
+    for (const e of b.events) {
+      if (e.method === 'Page.frameNavigated' && !e.params.frame.parentId) console.log('navigated:', e.params.frame.url);
+      if (e.method === 'Runtime.exceptionThrown') console.log('exception:', e.params.exceptionDetails.exception?.description ?? e.params.exceptionDetails.text);
+      if (e.method === 'Log.entryAdded') console.log(`log.${e.params.entry.level}:`, e.params.entry.text);
+    }
+    console.log('now:', await b.evalJs('location.href'));
+    console.log('text:', JSON.stringify(String(await b.evalJs('document.body?.innerText ?? ""')).slice(0, 400)));
+    await b.shot(path.join(OUT, 'flow.png'));
   } else if (mode === 'console') {
     await b.go(`${BASE}${arg ?? '/'}`, Number(process.env.WAIT ?? 6000));
     for (const e of b.events) {

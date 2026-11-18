@@ -41,6 +41,12 @@ in
       description = "Cluster dashboard agent socket; only an allowlisted summary of it is published.";
     };
     agentGid = lib.mkOption { type = lib.types.nullOr lib.types.int; default = null; description = "Group that may read the agent socket."; };
+    environmentFile = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      example = "/run/secrets/oriom-dev_env";
+      description = "Secrets as environment variables, e.g. ADMIN_PATH=/admin-<random>: the admin page's path (unset: no admin page). Keep it out of the Nix store.";
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -55,6 +61,7 @@ in
       ] ++ lib.optionals (cfg.coapPort != null) [ "${toString cfg.coapPort}:5683/udp" ]
         ++ lib.optionals (cfg.gopherPort != null) [ "${toString cfg.gopherPort}:7070/tcp" ]
         ++ lib.optionals (cfg.geminiPort != null) [ "${toString cfg.geminiPort}:1965/tcp" ];
+      environmentFiles = lib.optional (cfg.environmentFile != null) cfg.environmentFile;
       volumes = [ "${app}:/app:ro" "/var/lib/oriom-dev:/state" ]
         ++ lib.optional (cfg.agentSocket != null) "${dirOf cfg.agentSocket}:${dirOf cfg.agentSocket}:ro";
       environment = {

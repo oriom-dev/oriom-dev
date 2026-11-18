@@ -18,6 +18,7 @@ export interface Req {
   cookie?: string | null;
   accept?: string | null;
   client?: string; // remote address, only for de-duplicating the counter
+  secure?: boolean; // reached over TLS (HTTPS, or HTTP/3): the admin page needs it
   protocol: 'http' | 'http/0.9' | 'coap' | 'gopher' | 'gemini';
 }
 
@@ -53,6 +54,25 @@ function csp(site: SiteBundle, v: Variant): string {
   ].join('; ');
 }
 
+const ADMIN_PATH = /^\/[A-Za-z0-9_-]{16,128}$/;
+
+const inlineHashes = (html: string) =>
+  [...html.matchAll(/<script(?: type="module")?>([\s\S]*?)<\/script>/g)].map(([, body]) => `'sha256-${createHash('sha256').update(body!).digest('base64')}'`);
+
+/** The admin page talks to the author's PDS and its authorization server (any https). */
+function privateCsp(hashes: string[]): string {
+  return [
+    "default-src 'none'",
+    `script-src ${hashes.join(' ') || "'none'"}`,
+    "style-src 'unsafe-inline'",
+    "img-src 'self' data: blob: https:",
+    "connect-src 'self' https:",
+    "base-uri 'none'",
+    "form-action 'none'",
+    "frame-ancestors 'none'",
+  ].join('; ');
+}
+
 const SECURITY = {
   'x-content-type-options': 'nosniff',
   'referrer-policy': 'strict-origin-when-cross-origin',
@@ -68,10 +88,12 @@ export class App {
   private stats: () => Stats;
   private distDir: string;
 
-  constructor(counter: Counter, stats: () => Stats, distDir = DIST) {
+  constructor(counter: Counter, stats: () => Stats, distDir = DIST, adminPath = '') {
     this.counter = counter;
     this.stats = stats;
     this.distDir = distDir;
+    if (adminPath && !ADMIN_PATH.test(adminPath)) throw new Error('ADMIN_PATH must be / and at least 16 of [A-Za-z0-9_-]');
+    this.adminPath = adminPath;
     this.load();
   }
 
@@ -96,8 +118,27 @@ export class App {
     add('/robots.txt', 'robots.txt', 'text/plain; charset=utf-8');
     add('/sitemap.xml', 'sitemap.xml', 'application/xml');
     add('/llms.txt', 'llms.txt', 'text/plain; charset=utf-8');
-    add('/.well-known/site.standard.publication', 'site.standard.publication', 'text/plain; charset=utf-8');
+    add('/oauth/client-metadata.json', 'client-metadata.json', 'application/json');
+    this.private.clear();
+    const page = (route: string, file: string) => {
+      const f = path.join(this.distDir, file);
+      if (!existsSync(f)) return;
+      const body = readFileSync(f, 'utf8');
+      this.private.set(route, { body, csp: privateCsp(inlineHashes(body)) });
+    };
+    page('/oauth/callback', 'oauth-callback.html');
+    if (this.adminPath) page(this.adminPath, 'admin.html');
   }
+
+  /** Pages that are not part of the site: no design, no counter, never indexed or cached. */
+  private private = new Map<string, { body: string; csp: string }>();
+  /** The admin page's path (ADMIN_PATH): only who knows it finds the page. */
+  adminPath = '';
+  /** The site's site.standard.publication AT-URI, read from the PDS. */
+  publication = '';
+  /** Asks for the run-time pages to be read again (after the admin page writes). */
+  onRefresh?: () => void;
+  private lastRefresh = 0;
 
   private extra: Record<string, PageOut> = {};
 
@@ -153,6 +194,26 @@ export class App {
     if (file) {
       const cache = url.pathname === '/sw.js' ? 'no-cache' : 'public, max-age=3600';
       return { status: 200, headers: { 'content-type': file.type, 'cache-control': cache, ...SECURITY }, body: file.body };
+    }
+    const priv = this.private.get(url.pathname);
+    // only over TLS: on plain HTTP (which the site serves on purpose) it is not there at all
+    if (priv && req.protocol === 'http' && req.secure) {
+      return {
+        status: 200,
+        headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'x-robots-tag': 'noindex, nofollow', 'content-security-policy': priv.csp, ...SECURITY, 'referrer-policy': 'no-referrer' },
+        body: priv.body,
+      };
+    }
+    if (url.pathname === '/.well-known/site.standard.publication' && this.publication) {
+      // https://standard.site/docs/verification: the publication this site belongs to
+      return { status: 200, headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'public, max-age=300', ...SECURITY }, body: this.publication };
+    }
+    if (url.pathname === '/_/refresh') {
+      // anyone may ask; at most once in 10 s, and it only reads public records again
+      const now = Date.now();
+      const ok = !!this.onRefresh && now - this.lastRefresh > 10_000;
+      if (ok) { this.lastRefresh = now; this.onRefresh!(); }
+      return { status: ok ? 202 : 429, headers: { 'content-type': 'application/json', 'cache-control': 'no-store', ...SECURITY }, body: JSON.stringify({ ok }) };
     }
     if (url.pathname === '/api/stats') {
       // ?full adds per-container data and history: only the cluster popup asks for it

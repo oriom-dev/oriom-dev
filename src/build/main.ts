@@ -6,16 +6,17 @@ import { gzipSync } from 'node:zlib';
 import { VARIANTS, type Post, type SiteBundle } from '../shared/types.ts';
 import { oklchToLinearSrgb } from '../shared/color.ts';
 import { mdPath } from '../shared/routes.ts';
-import { ROOT, loadPosts, loadWorks } from './content.ts';
+import { ROOT, loadWorks } from './content.ts';
 import { strokeIcon } from './png.ts';
-import { ORIGIN, PUBLICATION_URI } from './render.ts';
+import { ORIGIN } from './render.ts';
 import { bundleJs, M_PATH } from './templates.ts';
 import { buildPages } from './pages.ts';
+import { writeAdmin } from './admin.ts';
 import { template } from './templates.ts';
 
 export function buildSite(extraPosts: Post[] = []): SiteBundle {
   const works = loadWorks();
-  const posts = [...loadPosts(), ...extraPosts].sort((a, b) => b.date.localeCompare(a.date));
+  const posts = [...extraPosts].sort((a, b) => b.date.localeCompare(a.date));
   const pages = buildPages(works, posts);
 
   const templates = Object.fromEntries(VARIANTS.map((v) => [v, template(v)])) as SiteBundle['templates'];
@@ -56,9 +57,9 @@ function writeExtras(out: string, site: SiteBundle): void {
   }));
   const paths = Object.keys(site.pages);
   writeFileSync(path.join(out, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${paths.map((p) => `<url><loc>${ORIGIN}${p === '/' ? '' : p}</loc></url>`).join('')}</urlset>\n`);
+  writeAdmin(out);
   writeFileSync(path.join(out, 'robots.txt'), `User-agent: *\nAllow: /\nSitemap: ${ORIGIN}/sitemap.xml\n`);
   writeFileSync(path.join(out, 'llms.txt'), `# oriom.dev\n\n> oriom のポートフォリオ。どのページも末尾に .md を付けると Markdown で読めます。\n\n${paths.map((p) => `- [${site.pages[p]!.title}](${ORIGIN}${mdPath(p)})`).join('\n')}\n`);
-  if (PUBLICATION_URI) writeFileSync(path.join(out, 'site.standard.publication'), PUBLICATION_URI);
 }
 
 if (import.meta.main) {
