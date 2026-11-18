@@ -32,3 +32,16 @@ oriom.dev の作業メモ。README はプロフィール用なので、進捗は
 ## いつか
 
 - [ ] 3D のランプが点灯した状態の確認（本番のクラスタのデータが必要）
+
+## 開発メモ
+
+```sh
+nix develop                      # Node.js 24、線画用の Python、libcoap
+npm run dev                      # ビルドして http://127.0.0.1:8080 で起動（dist の変更で読み直し）
+npm test                         # 512 KB・1 リクエスト・配置・各プロトコルなど
+```
+
+- 3D で記事が増えたときの並び：`/?v=3d&debug&fake=30`（今日から 1 か月ずつさかのぼる仮の記事を 30 件足す）
+- 3D の別の時刻の空：`/?v=3d&debug&at=2026-11-24T23:00`
+- クラスタのメーターとランプ：`node tools/fake-agent.ts /tmp/agent.sock &` のあと `CLUSTER_AGENT_SOCKET=/tmp/agent.sock npm run dev`
+- 線画：`nix develop -c python3 tools/lineart.py [slug]`、一覧は `node tools/artpreview.ts > sheet.svg`
