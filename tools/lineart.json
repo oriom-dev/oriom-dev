@@ -3,82 +3,62 @@
     "src": "tompedia.svg",
     "title": "とんペディアのロゴ",
     "threshold": 80,
-    "eps": 1.0
+    "max_strokes": 8,
+    "min_len": 0.05
   },
   "lens": {
     "src": "lens.png",
     "title": "LENS のフクロウ",
     "threshold": 90,
-    "eps": 1.2
+    "max_strokes": 10,
+    "min_len": 0.08
   },
   "linkm": {
     "src": "linkm.png",
     "title": "リンクエムの LM",
     "threshold": 90,
-    "eps": 1.0
+    "sigma": 1.6,
+    "max_strokes": 4
   },
   "erb": {
     "src": "erb.svg",
     "title": "ドイツ相続法情報室の「ド」",
     "threshold": 80,
-    "eps": 1.0
+    "max_strokes": 3
   },
   "ifg-pathleader": {
     "src": "ifg-pathleader.png",
     "title": "IFG Pathleader のアイコン",
     "threshold": 70,
-    "eps": 1.0
-  },
-  "jisaku": {
-    "src": "jisaku.svg",
-    "title": "Team JISAKU のロゴ",
-    "threshold": 80,
-    "eps": 1.0
-  },
-  "portrait": {
-    "src": "portrait.png",
-    "title": "似顔絵",
-    "mode": "edges",
-    "crop": [
-      0.36,
-      0.06,
-      0.72,
-      0.9
-    ],
-    "lo": 55,
-    "hi": 140,
-    "eps": 1.4,
-    "min_len": 20,
-    "size": 320
+    "close": 2,
+    "max_strokes": 4,
+    "min_len": 0.1
   },
   "kytos": {
     "mode": "proc",
     "fn": "anneal",
-    "title": "エネルギー地形を転がって最小値に落ち着く玉"
+    "title": "エネルギー地形のいちばん深い谷に落ち着く玉",
+    "keep_order": true
   },
   "q-sherpa": {
     "mode": "proc",
     "fn": "ridge",
-    "title": "山の稜線と山頂の旗"
+    "title": "山の稜線と山頂の旗",
+    "keep_order": true
   },
   "mosimo": {
     "mode": "proc",
     "fn": "mesh",
-    "title": "電波で投稿を中継していくスマートフォン",
-    "sharp": true
+    "title": "電波で投稿を中継していくスマートフォン"
   },
   "qr": {
     "mode": "proc",
     "fn": "qr",
-    "title": "QR コードの切り出しシンボル",
-    "reorder": true,
-    "sharp": true
+    "title": "角の丸い QR コードの切り出しシンボル"
   },
   "labo-match": {
     "mode": "proc",
     "fn": "match",
-    "title": "学生と研究室を結ぶ線",
-    "reorder": true,
-    "sharp": true
+    "title": "学生と研究室を結ぶ曲線"
   }
 }

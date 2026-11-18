@@ -1,22 +1,24 @@
 #!/usr/bin/env python3
-"""Turn a logo or photo into ONE continuous stroke for the 1D design.
+"""Turn a logo, or a figure drawn from formulas, into smooth line art.
 
   nix develop -c python3 tools/lineart.py            # all entries of tools/lineart.json
   nix develop -c python3 tools/lineart.py tompedia   # one entry
 
-Output: content/art/<slug>.json = {"aspect": w/h, "p": [x0, y0, dx, dy, ...]} where the
-points are on a 0..1000 grid (scaled to the box's width), delta-encoded, and the
-client draws a smooth Catmull-Rom curve through them. The stroke starts on the left
-edge and ends on the right edge so the page's thread can pass straight through.
+Output: content/art/<slug>.json =
+  {"aspect": w/h, "s": [[x0, y0, dx, dy, ...], ...], "c": [1, 0, ...], "title": ...}
+Each stroke is a list of evenly spaced points on a 0..1000 grid (scaled to the box
+width), delta-encoded; "c" marks closed strokes. Clients draw a smooth Catmull-Rom
+curve through each stroke. The strokes are stored in drawing order and direction, so
+the 1D page can join them into one line with tangent-continuous connectors; the 2D
+and 3D pages simply draw them one by one.
 Sources live in .cache/art-src (not committed); only the derived strokes are.
 """
-import json, math, sys
+import io, json, math, sys
 from pathlib import Path
 
 import cv2
 import numpy as np
 from PIL import Image
-from skimage.morphology import skeletonize
 
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / '.cache/art-src'
@@ -26,194 +28,181 @@ GRID = 1000
 
 def load(cfg):
     path = SRC / cfg['src']
+    size = cfg.get('size', 320)
     if path.suffix == '.svg':
-        import cairosvg, io
-        png = cairosvg.svg2png(url=str(path), output_width=cfg.get('size', 400))
+        import cairosvg
+        png = cairosvg.svg2png(url=str(path), output_width=size)
         im = Image.open(io.BytesIO(png)).convert('RGBA')
         bg = Image.new('RGBA', im.size, (255, 255, 255, 255))
         im = Image.alpha_composite(bg, im)
     else:
         im = Image.open(path).convert('RGB')
-    if 'crop' in cfg:  # fractions: [left, top, right, bottom]
+    if 'crop' in cfg:
         l, t, r, b = cfg['crop']
         w, h = im.size
         im = im.crop((int(l * w), int(t * h), int(r * w), int(b * h)))
-    size = cfg.get('size', 400)
     im.thumbnail((size, size), Image.LANCZOS)
     return np.array(im.convert('RGB'))
 
 
-def mask_of(img, cfg):
-    """Foreground = far enough from the background colour (sampled at the corners)."""
+def smooth_closed(pts, sigma, spacing):
+    """Gaussian-smooth a closed pixel contour, then resample it evenly."""
+    n = len(pts)
+    k = max(1, int(sigma * 3))
+    w = np.exp(-0.5 * (np.arange(-k, k + 1) / sigma) ** 2)
+    w /= w.sum()
+    ext = np.vstack([pts[-k:], pts, pts[:k]])
+    sm = np.stack([np.convolve(ext[:, i], w, mode='valid') for i in range(2)], axis=1)[:n]
+    return resample(np.vstack([sm, sm[:1]]), spacing)[:-1]
+
+
+def resample(pts, spacing):
+    seg = np.linalg.norm(np.diff(pts, axis=0), axis=1)
+    d = np.concatenate([[0], np.cumsum(seg)])
+    if d[-1] < spacing:
+        return pts[[0, -1]]
+    t = np.linspace(0, d[-1], max(3, int(round(d[-1] / spacing)) + 1))
+    return np.stack([np.interp(t, d, pts[:, i]) for i in range(2)], axis=1)
+
+
+def logo_strokes(img, cfg):
     h, w, _ = img.shape
-    if 'bg' in cfg:
-        bg = np.array(cfg['bg'], float)
-    else:
-        corners = np.array([img[0, 0], img[0, -1], img[-1, 0], img[-1, -1]], float)
-        bg = np.median(corners, axis=0)
-    dist = np.linalg.norm(img.astype(float) - bg, axis=2)
-    m = (dist > cfg.get('threshold', 60)).astype(np.uint8)
-    k = cfg.get('close', 1)
-    if k:
-        m = cv2.morphologyEx(m, cv2.MORPH_CLOSE, np.ones((k * 2 + 1, k * 2 + 1), np.uint8))
-    return m
+    corners = np.array([img[0, 0], img[0, -1], img[-1, 0], img[-1, -1]], float)
+    bg = np.array(cfg['bg'], float) if 'bg' in cfg else np.median(corners, axis=0)
+    m = (np.linalg.norm(img.astype(float) - bg, axis=2) > cfg.get('threshold', 70)).astype(np.uint8)
+    k = cfg.get('close', 2)
+    m = cv2.morphologyEx(m, cv2.MORPH_CLOSE, np.ones((2 * k + 1, 2 * k + 1), np.uint8))
+    m = cv2.morphologyEx(m, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+    mode = cv2.RETR_LIST if cfg.get('holes', True) else cv2.RETR_EXTERNAL
+    cs, _ = cv2.findContours(m, mode, cv2.CHAIN_APPROX_NONE)
+    cs = sorted((c[:, 0, :].astype(float) for c in cs), key=lambda c: -cv2.arcLength(c.astype(np.float32), True))
+    cs = [c for c in cs if cv2.arcLength(c.astype(np.float32), True) >= cfg.get('min_len', 0.12) * (w + h)]
+    cs = cs[:cfg.get('max_strokes', 12)]
+    spacing = cfg.get('spacing', 0.025) * (w + h) / 2
+    return [(smooth_closed(c, cfg.get('sigma', 2.5) * (w + h) / 640, spacing), True) for c in cs]
 
 
-def contours(img, cfg):
-    m = mask_of(img, cfg)
-    cs, _ = cv2.findContours(m, cv2.RETR_LIST if cfg.get('holes', True) else cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    eps = cfg.get('eps', 1.2)
-    out = []
-    for c in cs:
-        if cv2.arcLength(c, True) < cfg.get('min_len', 25):
-            continue
-        a = cv2.approxPolyDP(c, eps, True)[:, 0, :].astype(float)
-        out.append(np.vstack([a, a[:1]]))  # closed
-    return out, m.shape
+def rounded_rect(x, y, w, h, r, n=10):
+    pts = []
+    for cx, cy, a0 in ((x + w - r, y + r, -90), (x + w - r, y + h - r, 0), (x + r, y + h - r, 90), (x + r, y + r, 180)):
+        for i in range(n):
+            a = math.radians(a0 + 90 * i / (n - 1))
+            pts.append((cx + r * math.cos(a), cy + r * math.sin(a)))
+    return np.array(pts), True
 
 
-def skeleton_strokes(img, cfg):
-    """Edges of a photo, thinned to 1px and walked into polylines."""
-    g = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-    g = cv2.bilateralFilter(g, 9, 60, 9)
-    e = cv2.Canny(g, cfg.get('lo', 60), cfg.get('hi', 150))
-    e = cv2.dilate(e, np.ones((2, 2), np.uint8))
-    sk = skeletonize(e > 0)
-    pts = set(zip(*np.nonzero(sk)))
-    strokes = []
-    nb = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
-    while pts:
-        # start from an endpoint when possible
-        start = next((p for p in pts if sum((p[0] + dy, p[1] + dx) in pts for dy, dx in nb) == 1), next(iter(pts)))
-        line = [start]
-        pts.discard(start)
-        cur = start
-        while True:
-            nxt = next(((cur[0] + dy, cur[1] + dx) for dy, dx in nb if (cur[0] + dy, cur[1] + dx) in pts), None)
-            if nxt is None:
-                break
-            pts.discard(nxt)
-            line.append(nxt)
-            cur = nxt
-        if len(line) >= cfg.get('min_len', 20):
-            a = np.array([[x, y] for y, x in line], np.float32).reshape(-1, 1, 2)
-            strokes.append(cv2.approxPolyDP(a, cfg.get('eps', 1.5), False)[:, 0, :].astype(float))
-    return strokes, g.shape
+def circle(cx, cy, r, n=20):
+    a = np.linspace(0, 2 * np.pi, n, endpoint=False)
+    return np.c_[cx + r * np.cos(a), cy + r * np.sin(a)], True
 
 
-def order(strokes, closed, drift=0.6):
-    """Greedy nearest-neighbour tour that sweeps left to right (moving left costs extra),
-    so the stroke enters on the left, leaves on the right, and the long connecting
-    lines stay short. Closed loops may start anywhere."""
-    if not strokes:
-        return []
+def bezier(a, c1, c2, b, n=24):
+    t = np.linspace(0, 1, n)[:, None]
+    a, c1, c2, b = map(np.array, (a, c1, c2, b))
+    return (1 - t) ** 3 * a + 3 * (1 - t) ** 2 * t * c1 + 3 * (1 - t) * t ** 2 * c2 + t ** 3 * b, False
+
+
+def procedural(fn):
+    """Simple figures for works that only have screenshots: few strokes, no corners."""
+    if fn == 'anneal':  # Kytos: an energy landscape and a ball settling in the deepest valley
+        x = np.linspace(0, 400, 90)
+        y = 150 - 62 * np.exp(-((x - 270) / 48) ** 2) - 26 * np.exp(-((x - 110) / 32) ** 2) + 7 * np.sin(x / 22)
+        i = int(np.argmin(y))
+        # left slope, a hop over the hill into the valley, a lap round the ball, right slope
+        j = int(np.argmin(np.abs(x - 110)))
+        a = np.linspace(np.pi / 2, np.pi / 2 + 2 * np.pi, 24)
+        ball = np.c_[x[i] + 13 * np.cos(a), y[i] - 13 - 13 * np.sin(a)]
+        return [(np.c_[x[:j + 1], y[:j + 1]], False), bezier((x[j], y[j]), (140, 40), (230, 30), (x[i], y[i] - 26), 20),
+                (ball, False), (np.c_[x[i:], y[i:]], False)]
+    if fn == 'ridge':  # Q-Sherpa: a ridge with a pennant on the summit
+        x = np.linspace(0, 400, 90)
+        y = 175 - 120 * np.exp(-((x - 200) / 72) ** 2) - 38 * np.exp(-((x - 85) / 42) ** 2) - 46 * np.exp(-((x - 320) / 50) ** 2)
+        i = int(np.argmin(y))
+        px, py = x[i], y[i]
+        # up the left slope, up the pole, round the pennant, down again, down the right slope
+        flag = np.vstack([bezier((px, py - 50), (px + 18, py - 52), (px + 24, py - 44), (px + 32, py - 40), 10)[0],
+                          bezier((px + 32, py - 40), (px + 22, py - 36), (px + 14, py - 30), (px, py - 30), 10)[0][1:]])
+        return [(np.c_[x[:i + 1], y[:i + 1]], False), (np.array([[px, py], [px, py - 25], [px, py - 50]]), False),
+                (flag, False), (np.array([[px, py - 30], [px, py - 15], [px, py]]), False), (np.c_[x[i:], y[i:]], False)]
+    if fn == 'mesh':  # Mosimo: phones passing a post along by radio
+        out = []
+        xs = [30, 160, 290]
+        for k, x in enumerate(xs):
+            y = 60 + (30 if k % 2 else 0)
+            out.append(rounded_rect(x, y, 56, 96, 12))
+            if k < len(xs) - 1:
+                for r in (26, 46):
+                    a = np.linspace(-0.55, 0.55, 12)
+                    out.append((np.c_[x + 70 + r * np.cos(a), y + 48 + 15 * (1 if k % 2 == 0 else -1) * 0 + r * np.sin(a)], False))
+        return out
+    if fn == 'qr':  # QR GENERATOR.: the three finder patterns, rounded
+        out = []
+        for x, y in ((0, 0), (0, 150), (150, 0)):
+            out += [rounded_rect(x, y, 90, 90, 18), rounded_rect(x + 27, y + 27, 36, 36, 9)]
+        out.append(circle(195, 195, 16))
+        return out
+    if fn == 'match':  # Labo-Match: students on the left, labs on the right, matched by curves
+        out = []
+        for i in range(4):
+            out.append(circle(30, 30 + i * 55, 12))
+        for j in range(3):
+            out.append(rounded_rect(330, 30 + j * 70, 44, 44, 12))
+        for i, j in ((0, 0), (1, 2), (2, 1), (3, 2)):
+            a, b = (42, 30 + i * 55), (330, 52 + j * 70)
+            out.append(bezier(a, (160, a[1]), (220, b[1]), b, 18))
+        return out
+    raise ValueError(fn)
+
+
+def order(strokes, drift=0.7):
+    """Greedy left-to-right tour; closed strokes start nearest, open ones may flip."""
     rest = list(strokes)
-    cur = np.array([-1e9, np.mean([s[:, 1].mean() for s in rest])])
+    cur = np.array([-1e9, np.mean([s.mean(axis=0)[1] for s, _ in rest])])
     path = []
     while rest:
         best = None
-        for i, s in enumerate(rest):
+        for i, (s, closed) in enumerate(rest):
+            cost = np.linalg.norm(s - cur, axis=1) + drift * np.maximum(cur[0] - s[:, 0], 0)
             if closed:
-                d = np.linalg.norm(s[:-1] - cur, axis=1) + drift * np.maximum(cur[0] - s[:-1, 0], 0)
-                j = int(d.argmin())
-                cand = (d[j], i, j, False)
+                j = int(cost.argmin())
+                cand = (cost[j], i, j, False)
             else:
-                d0 = np.linalg.norm(s[0] - cur) + drift * max(cur[0] - s[0, 0], 0)
-                d1 = np.linalg.norm(s[-1] - cur) + drift * max(cur[0] - s[-1, 0], 0)
-                cand = (min(d0, d1), i, 0, d1 < d0)
+                cand = min((cost[0], i, 0, False), (cost[-1], i, 0, True))
             if best is None or cand[0] < best[0]:
                 best = cand
         _, i, j, rev = best
-        s = rest.pop(i)
+        s, closed = rest.pop(i)
         if closed:
-            s = np.vstack([s[j:-1], s[:j], s[j:j + 1]])
+            s = np.vstack([s[j:], s[:j]])
+            # go round in the direction that leaves the previous point most smoothly
+            if len(path) and np.dot(s[1] - s[0], s[0] - cur) < np.dot(s[-1] - s[0], s[0] - cur):
+                s = np.vstack([s[:1], s[1:][::-1]])
         elif rev:
             s = s[::-1]
-        path.append(s)
-        cur = s[-1]
+        path.append((s, closed))
+        cur = s[0] if closed else s[-1]
     return path
 
 
-def encode(path, shape, cfg):
-    pts = np.vstack(path)
-    # fit the drawing into the box with a small margin, keep aspect
+def encode(strokes, cfg):
+    pts = np.vstack([s for s, _ in strokes])
     x0, y0 = pts.min(axis=0)
     x1, y1 = pts.max(axis=0)
     bw, bh = max(x1 - x0, 1), max(y1 - y0, 1)
     pad = cfg.get('pad', 0.06)
-    aspect = bw / bh
+    aspect = (bw * (1 + 2 * pad)) / (bh + bw * 2 * pad)
     scale = GRID * (1 - 2 * pad) / bw
-    pts = (pts - [x0, y0]) * scale + [GRID * pad, GRID * pad / aspect]
-    hgt = GRID / aspect
-    # enter from the left edge, leave from the right edge, at the stroke's own heights
-    first, last = pts[0], pts[-1]
-    pts = np.vstack([[0, first[1]], pts, [GRID, last[1]]])
-    q = np.round(pts).astype(int)
-    if not cfg.get('sharp'):
+    out, closed = [], []
+    for s, c in strokes:
+        q = np.round((s - [x0, y0]) * scale + GRID * pad).astype(int)
         keep = [0] + [i for i in range(1, len(q)) if (q[i] != q[i - 1]).any()]
         q = q[keep]
-    flat = [int(q[0, 0]), int(q[0, 1])]
-    for a, b in zip(q[:-1], q[1:]):
-        flat += [int(b[0] - a[0]), int(b[1] - a[1])]
-    return {'aspect': round(aspect, 4), 'p': flat}
-
-
-def procedural(cfg):
-    """Drawn from formulas, for works that only have screenshots."""
-    fn = cfg['fn']
-    t = np.linspace(0, 1, 400)
-    if fn == 'anneal':  # Kytos: an energy landscape and the ball that settles in the global minimum
-        x = t * 400
-        y = 150 - 60 * np.exp(-((x - 270) / 45) ** 2) - 25 * np.exp(-((x - 110) / 30) ** 2) + 12 * np.sin(x / 13)
-        land = np.c_[x, y]
-        a = np.linspace(0, 2 * np.pi, 40)
-        ball = np.c_[270 + 10 * np.cos(a + np.pi), 70 + 10 * np.sin(a + np.pi)]
-        hop = np.c_[np.linspace(110, 260, 60), 95 - 70 * np.sin(np.linspace(0, np.pi, 60))]
-        return [land[:110], hop, ball, land[110:]]
-    if fn == 'ridge':  # Q-Sherpa: a mountain ridge, a path up and a flag on the summit
-        x = t * 400
-        y = 170 - 120 * np.exp(-((x - 200) / 70) ** 2) - 40 * np.exp(-((x - 90) / 40) ** 2) - 50 * np.exp(-((x - 320) / 50) ** 2)
-        y += 3 * np.sin(x / 5)
-        i = int(np.argmin(y))
-        flag = np.array([[x[i], y[i]], [x[i], y[i] - 45], [x[i] + 28, y[i] - 36], [x[i], y[i] - 27], [x[i], y[i]]])
-        return [np.c_[x[:i + 1], y[:i + 1]], flag, np.c_[x[i:], y[i:]]]
-    if fn == 'mesh':  # Mosimo: phones relaying a post hop by hop with radio arcs
-        out = []
-        xs = [20, 140, 260, 380]
-        for k, cx in enumerate(xs):
-            cy = 110 + (25 if k % 2 else -25)
-            phone = np.array([[cx - 18, cy + 32], [cx - 18, cy - 32], [cx + 18, cy - 32], [cx + 18, cy + 32], [cx - 18, cy + 32]])
-            out.append(phone)
-            if k < len(xs) - 1:
-                for r in (22, 38, 54):
-                    a = np.linspace(-0.7, 0.7, 14)
-                    arc = np.c_[cx + 18 + r * np.cos(a), cy + r * np.sin(a)]
-                    out.append(arc)
-        return out
-    if fn == 'qr':  # QR GENERATOR.: three finder patterns and a few modules
-        sq = lambda x, y, s: np.array([[x, y], [x + s, y], [x + s, y + s], [x, y + s], [x, y]], float)
-        out = []
-        for x, y in ((0, 0), (0, 140), (140, 0)):
-            out += [sq(x, y, 70), sq(x + 12, y + 12, 46), sq(x + 24, y + 24, 22)]
-        rng = np.random.default_rng(7)
-        for _ in range(14):
-            x, y = rng.integers(9, 21, 2) * 10
-            out.append(sq(x, y, 10))
-        return out
-    if fn == 'match':  # Labo-Match: students and labs, matched by arcs
-        out = []
-        for i in range(5):
-            out.append(np.c_[30 + 8 * np.cos(np.linspace(0, 2 * np.pi, 20)), 30 + i * 45 + 8 * np.sin(np.linspace(0, 2 * np.pi, 20))])
-        for j in range(3):
-            y = 50 + j * 70
-            out.append(np.array([[330, y - 14], [358, y - 14], [358, y + 14], [330, y + 14], [330, y - 14]], float))
-        for i, j in ((0, 0), (1, 1), (2, 0), (3, 2), (4, 1)):
-            a, b = np.array([38, 30 + i * 45]), np.array([330, 50 + j * 70])
-            u = np.linspace(0, 1, 30)[:, None]
-            m = (a + b) / 2 + [0, -30]
-            out.append((1 - u) ** 2 * a + 2 * (1 - u) * u * m + u ** 2 * b)
-        return out
-    raise ValueError(fn)
+        flat = [int(q[0, 0]), int(q[0, 1])]
+        for a, b in zip(q[:-1], q[1:]):
+            flat += [int(b[0] - a[0]), int(b[1] - a[1])]
+        out.append(flat)
+        closed.append(1 if c else 0)
+    return {'aspect': round(float(aspect), 4), 's': out, 'c': closed}
 
 
 def main():
@@ -223,28 +212,14 @@ def main():
     for slug, cfg in cfgs.items():
         if only and slug not in only:
             continue
-        if cfg.get('mode') == 'proc':
-            strokes = procedural(cfg)
-            if cfg.get('sharp'):
-                strokes = [np.repeat(st, 2, axis=0) if len(st) <= 6 else st for st in strokes]
-            art = encode(order(strokes, False) if cfg.get('reorder') else strokes, None, cfg)
-            art['title'] = cfg.get('title', slug)
-            text = json.dumps(art, separators=(',', ':'), ensure_ascii=False)
-            (OUT / f'{slug}.json').write_text(text + '\n')
-            print(f'{slug}: {len(art["p"]) // 2} points, {len(text) / 1024:.1f} KB')
-            continue
-        img = load(cfg)
-        if cfg.get('mode') == 'edges':
-            strokes, shape = skeleton_strokes(img, cfg)
-            closed = False
-        else:
-            strokes, shape = contours(img, cfg)
-            closed = True
-        art = encode(order(strokes, closed), shape, cfg)
+        strokes = procedural(cfg['fn']) if cfg.get('mode') == 'proc' else logo_strokes(load(cfg), cfg)
+        strokes = [(np.asarray(s, float), c) for s, c in strokes]
+        art = encode(strokes if cfg.get('keep_order') else order(strokes), cfg)
         art['title'] = cfg.get('title', slug)
         text = json.dumps(art, separators=(',', ':'), ensure_ascii=False)
         (OUT / f'{slug}.json').write_text(text + '\n')
-        print(f'{slug}: {len(art["p"]) // 2} points, {len(text) / 1024:.1f} KB')
+        n = sum(len(s) // 2 for s in art['s'])
+        print(f'{slug}: {len(art["s"])} strokes, {n} points, {len(text) / 1024:.1f} KB')
 
 
 if __name__ == '__main__':

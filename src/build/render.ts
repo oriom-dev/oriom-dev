@@ -1,5 +1,5 @@
 import { Marked } from 'marked';
-import { artAttr, curve, decode, type Art } from '../shared/art.ts';
+import { artAttr, separatePath, type Art } from '../shared/art.ts';
 import { mdPath } from '../shared/routes.ts';
 import type { PageOut, Post, Work } from '../shared/types.ts';
 import { AUTHOR, loadStandard } from './content.ts';
@@ -28,8 +28,7 @@ export type Target = 'md' | 'html';
  */
 export function figure(a: Art, label: string, cls = ''): string {
   const h = Math.round(1000 / a.aspect);
-  const pts = decode(a.p);
-  const d = `M${pts[0]![0]} ${pts[0]![1]}${curve(pts)}`;
+  const d = separatePath(a);
   return `<figure class="art${cls && ` ${cls}`}" data-art="${artAttr(a)}" style="aspect-ratio:${a.aspect}" role="img" aria-label="${esc(label)}">`
     + `<svg viewBox="0 0 1000 ${h}" aria-hidden="true"><path d="${d}"/></svg></figure>`;
 }

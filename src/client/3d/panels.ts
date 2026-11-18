@@ -1,7 +1,7 @@
 // Signs in the world. Text is drawn with HTML-in-Canvas (`<canvas layoutsubtree>` +
 // drawElementImage) when the browser has it, so the sign shows the real, accessible
 // DOM; otherwise the text is laid out by hand on a 2D canvas.
-import { curve, decode, parseArtAttr } from '../../shared/art.ts';
+import { parseArtAttr, separatePath } from '../../shared/art.ts';
 
 export interface Sign { id: number; quad: Float32Array; canvas: HTMLCanvasElement; href?: string; reader?: boolean; label: string; center: number[]; normal: number[]; w: number; h: number }
 
@@ -71,13 +71,12 @@ export function workCanvas(a: HTMLAnchorElement): HTMLCanvasElement {
   const fig = a.querySelector<HTMLElement>('figure.art');
   if (fig?.dataset.art) {
     const art = parseArtAttr(fig.dataset.art);
-    const pts = decode(art.p);
     const boxH = 170, s = Math.min((W - 120) / 1000, boxH / (1000 / art.aspect));
     const ox = (W - 1000 * s) / 2, oy = 36 + (boxH - (1000 / art.aspect) * s) / 2;
     ctx.strokeStyle = css('--line') || '#888';
     ctx.lineWidth = 3;
     ctx.lineJoin = ctx.lineCap = 'round';
-    ctx.stroke(new Path2D(`M${ox + pts[0]![0] * s} ${oy + pts[0]![1] * s}${curve(pts, s, ox, oy)}`));
+    ctx.stroke(new Path2D(separatePath(art, s, ox, oy)));
   }
   ctx.fillStyle = css('--fg') || '#000';
   ctx.textBaseline = 'top';

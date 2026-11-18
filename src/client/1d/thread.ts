@@ -2,7 +2,7 @@
 // the margins ("lanes") and only enters the column through empty space: the gaps
 // between blocks, under headings, around tables, and through line drawings. It never
 // crosses a line of text.
-import { curve, decode, parseArtAttr, type Pt } from '../../shared/art.ts';
+import { cr, oneStroke, parseArtAttr, type Pt } from '../../shared/art.ts';
 
 const K = 0.5523; // circle-ish cubic handle length
 const fx = (n: number) => Math.round(n * 10) / 10;
@@ -145,11 +145,9 @@ export function buildThread(): string {
       }
       case 'FIGURE': {
         const art = parseArtAttr((el as HTMLElement).dataset.art!);
-        const pts = decode(art.p);
         const sc = (b.r - b.l) / 1000;
-        const first = pts[0]!, last = pts[pts.length - 1]!;
-        const enter: Pt = [b.l + first[0] * sc, b.t + first[1] * sc];
-        const exit: Pt = [b.l + last[0] * sc, b.t + last[1] * sc];
+        const line = oneStroke(art, sc, b.l, b.t);
+        const enter = line.start, exit = line.end;
         const thumb = el.classList.contains('thumb');
         if (thumb) cross('L', b.t - 8);
         else cross(side, 0);
@@ -158,7 +156,7 @@ export function buildThread(): string {
           // come around the top of the drawing to its left edge
           pen.to([lane(), b.t - gapAbove / 2]).to([b.l - 10, b.t - gapAbove / 2]).to([b.l - 10, enter[1]]);
         }
-        pen.raw(enter, curve(pts, sc, b.l, b.t), exit);
+        pen.raw(enter, line.d, exit);
         if (thumb) {
           // down the gutter beside the text, then back to the left lane under the item
           const li = el.closest('li')!;
@@ -212,7 +210,7 @@ export function buildThread(): string {
           const ang = Math.PI + t * 5 * Math.PI, rr = 26 * (1 - t * 0.9);
           pts.push([cx + Math.cos(ang) * rr, cy + Math.sin(ang) * rr]);
         }
-        const seg = curve(pts);
+        const seg = cr(pts, false);
         const a = pts[pts.length - 1]!;
         pen.raw([cx - 26, cy], seg, a);
       }
