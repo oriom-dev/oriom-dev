@@ -28,8 +28,16 @@ export function buildSite(): SiteBundle {
   }
 
   const templates = Object.fromEntries(VARIANTS.map((v) => [v, template(v)])) as SiteBundle['templates'];
+  const scriptHashes = Object.fromEntries(VARIANTS.map((v) => [v, inlineScriptHashes(templates[v])])) as SiteBundle['scriptHashes'];
   const version = createHash('sha256').update(JSON.stringify({ templates, pages })).digest('hex').slice(0, 12);
-  return { version, builtAt: new Date().toISOString(), templates, pages };
+  return { version, builtAt: new Date().toISOString(), templates, scriptHashes, pages };
+}
+
+/** CSP hashes of executable inline scripts (JSON data blocks are not executed). */
+function inlineScriptHashes(html: string): string[] {
+  return [...html.matchAll(/<script(\s[^>]*)?>([\s\S]*?)<\/script>/g)]
+    .filter(([, attrs = '']) => !/type="application\/json"/.test(attrs))
+    .map(([, , body]) => `'sha256-${createHash('sha256').update(body!).digest('base64')}'`);
 }
 
 if (import.meta.main) {

@@ -27,7 +27,7 @@ function rows(s: Stats | undefined, full: boolean): Row[] {
     out.push([`${node.name} のメモリ`, `${bytes(node.memory.used)} / ${bytes(node.memory.total)}`, `mem:${node.name}`]);
     if (full) {
       out.push([`${node.name} の通信`, `↓${bytes(node.rx)}/s ↑${bytes(node.tx)}/s`, `net:${node.name}`]);
-      out.push([`${node.name} のコンテナ`, n(node.containers, '個'), `ctr:${node.name}`]);
+      out.push([`${node.name} のコンテナ`, n(node.containers.length, '個'), `ctr:${node.name}`]);
       out.push([`${node.name} の稼働時間`, dur(node.uptime), `up:${node.name}`]);
     }
   }

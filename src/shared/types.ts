@@ -47,6 +47,8 @@ export interface SiteBundle {
   version: string;
   builtAt: string;
   templates: Record<Variant, string>;
+  /** script-src hashes per template, for the Content-Security-Policy header. */
+  scriptHashes: Record<Variant, string[]>;
   pages: Record<string, PageOut>;
   stats?: Stats;
 }
@@ -60,14 +62,19 @@ export interface Stats {
 }
 
 export interface ClusterSummary {
-  nodes: {
-    name: string;
-    cpu: number | null; // percent
-    memory: { used: number; total: number };
-    rx: number | null; // bytes/s
-    tx: number | null;
-    containers: number;
-    uptime: number | null; // seconds
-    history: { cpu: (number | null)[]; mem: (number | null)[] };
-  }[];
+  nodes: ClusterNode[];
+}
+
+/** What is public about a node: an allowlist of the cluster agent's data, nothing else. */
+export interface ClusterNode {
+  name: string;
+  cpus: number;
+  load: number[];
+  cpu: number | null; // percent of all cores
+  memory: { used: number; total: number };
+  rx: number | null; // bytes/s on physical interfaces
+  tx: number | null;
+  uptime: number | null; // seconds
+  containers: { name: string; cpu: number | null; memory: number | null }[]; // running only; cpu in cores
+  history: { cpu: (number | null)[]; mem: (number | null)[] };
 }
