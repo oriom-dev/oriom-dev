@@ -36,6 +36,9 @@ const popup = initPopup({
 // ---------------------------------------------------------------- world and signs
 let items: Item[] = [];
 try { items = JSON.parse($('items').textContent || '[]'); } catch { /* no signs */ }
+// ?debug&fake=N adds N made-up posts, to see how the layout copes with growth
+const fake = new URLSearchParams(location.search).has('debug') ? Number(new URLSearchParams(location.search).get('fake') ?? 0) : 0;
+for (let i = 0; i < fake; i++) items.push({ kind: 'post', path: `/blog/fake-${i}`, title: `テストの記事 ${i + 1}：少し長めのタイトルで折り返しを確かめる`, date: '2026-01-01', summary: '仮の概要です。'.repeat(4) });
 const layout = ringLayout(items.length);
 const world = new World(layout.plaza);
 const player = new Player(world);
