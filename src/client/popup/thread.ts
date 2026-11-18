@@ -102,7 +102,7 @@ export function buildThread(root: HTMLElement): string {
   const margin = Math.min(L, W - Rx); // space beside the column
   const g = Math.min(Math.max(margin * 0.5, 6), 56);
   const lanes = { L: L - g, R: Rx + g };
-  const wander = Math.max(0, Math.min(margin - g - 6, g - 8, 20));
+  const wander = Math.max(0, Math.min(margin - g - 14, g - 10, 12)); // meander, but never near the text
   let side: 'L' | 'R' = 'L';
   const lane = () => lanes[side];
   // enter from the top edge of the popup, curl once, and drop down the left lane
