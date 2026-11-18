@@ -93,7 +93,7 @@ flowchart LR
 - [x] 3 次元デザイン（ノイズ生成のボクセル世界・WebGPU / WebGL 2）
 - [x] サーバー（HTTP/0.9–3、CoAP、ランダム配信、ライブ統計）
 - [x] Service Worker / PWA（完全オフライン）
-- [ ] standard.site への公開とチーム記事の集約
+- [x] standard.site への公開とチーム記事の集約（公開の実行は未）
 - [ ] Open Badges の検証
 - [ ] VPS へのデプロイ
 
