@@ -39,16 +39,16 @@ here && document.querySelectorAll(`.edges g[data-from="${slug}"],.edges g[data-t
 
 // Drag the background to pan (touch already pans natively).
 let drag: { x: number; y: number; sx: number; sy: number } | null = null;
-addEventListener('pointerdown', (e) => {
+document.addEventListener('pointerdown', (e) => {
   if (e.pointerType !== 'mouse' || e.button !== 0) return;
   if ((e.target as Element).closest('a,button,.card,input,summary')) return;
   drag = { x: e.clientX, y: e.clientY, sx: scrollX, sy: scrollY };
   document.body.classList.add('panning');
 });
-addEventListener('pointermove', (e) => {
+document.addEventListener('pointermove', (e) => {
   if (drag) scrollTo(drag.sx - (e.clientX - drag.x), drag.sy - (e.clientY - drag.y));
 });
-addEventListener('pointerup', () => { drag = null; document.body.classList.remove('panning'); });
+document.addEventListener('pointerup', () => { drag = null; document.body.classList.remove('panning'); });
 
 // "地図 →" scrolls sideways to the map (or to this page's node) instead of jumping.
 document.querySelector('.tomap')?.addEventListener('click', (e) => {
