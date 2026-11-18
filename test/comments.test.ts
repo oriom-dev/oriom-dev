@@ -36,7 +36,7 @@ test('comments render escaped, nested, in both Markdown and HTML', () => {
   assert.doesNotMatch(html, /<script>|<b>Eve/);
   assert.match(html, /&lt;script&gt;x&lt;\/script&gt; \*hi\*/);
   assert.match(html, /<ul><li>.*<ul><li>.*Bob/s);
-  assert.match(html, /href="https:\/\/bsky\.app\/profile\/did:plc:me\/post\/abc">Bluesky で返信する</);
+  assert.match(html, /href="https:\/\/bsky\.app\/profile\/did:plc:me\/post\/abc" target="_blank" rel="noopener">Bluesky で返信する</);
   const md = postMarkdown(post, 'md', cs);
   assert.match(md, /^- \*\*\\<b\\>Eve\\<\/b\\>\*\*（@x\.test/m);
   assert.match(md, /^  - \*\*Bob\*\*/m);

@@ -4,7 +4,8 @@
     "title": "とんペディアのロゴ",
     "threshold": 80,
     "size": 400,
-    "min_len": 0.03
+    "min_len": 0.03,
+    "frame": 0.22
   },
   "lens": {
     "src": "lens.png",
@@ -33,7 +34,8 @@
     "size": 400,
     "min_len": 0.03,
     "drop_frame": true,
-    "close": 0
+    "close": 0,
+    "frame": 0.12
   },
   "kytos": {
     "mode": "proc",

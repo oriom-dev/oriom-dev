@@ -46,3 +46,4 @@ html.popped body{overflow:hidden}
 .pop .works .tags{grid-column:2;margin:.35rem 0 0;gap:.3rem}.pop .works .tags li{font-size:.72em;padding:0 .4rem}
 .pop .works dl.stats{grid-column:2;margin:0;display:block;font-size:.9em}.pop dl.stats div{flex-direction:row;gap:.4rem;align-items:baseline}.pop dl.stats dt{color:var(--muted)}
 .pop ul.works figure.art svg{max-height:4rem;width:auto;max-width:100%}.pop ul.works figure.art{display:flex;justify-content:center}.pop dl.stats dd{font-size:1em}
+.pop figure.hero.badge{max-width:9rem;margin-inline:0}

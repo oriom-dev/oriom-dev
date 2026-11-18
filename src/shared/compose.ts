@@ -23,7 +23,7 @@ function card(it: Item): string {
 
 /** The 2D view: a column per year, newest first; works, posts and badges in each. */
 export function years(site: SiteBundle): string {
-  const all = [...items(site), ...(site.badges ?? [])];
+  const all = Object.values(site.pages).flatMap((p) => (p.item ? [p.item] : []));
   const by = new Map<string, Item[]>();
   for (const it of all) {
     const y = (it.date ?? '').slice(0, 4) || '—';

@@ -87,6 +87,18 @@ def logo_strokes(img, cfg):
         cs = [c for c in cs if not (c[:, 0].min() <= 1 and c[:, 1].min() <= 1 and c[:, 0].max() >= w - 2 and c[:, 1].max() >= h - 2)]
     cs = cs[:cfg.get('max_strokes', 40)]
     out = []
+    if 'frame' in cfg:
+        # frames (contours nearly as big as the largest) become plain rounded rectangles
+        boxes = [cv2.boundingRect(c.astype(np.float32)) for c in cs]
+        big = max(bw * bh for _, _, bw, bh in boxes)
+        keep = []
+        for c, (x, y, bw, bh) in zip(cs, boxes):
+            if bw * bh >= 0.6 * big:
+                r = min(bw, bh) * cfg['frame']
+                out.append(rounded_rect(x, y, bw, bh, r, 3))
+            else:
+                keep.append(c)
+        cs = keep
     for c in cs:
         sm = smooth_closed(c, cfg.get('sigma', 0.9), 1.0)
         poly = cv2.approxPolyDP(sm.astype(np.float32).reshape(-1, 1, 2), cfg.get('eps', 0.006) * size, True)[:, 0, :]
@@ -95,12 +107,19 @@ def logo_strokes(img, cfg):
     return out
 
 
-def rounded_rect(x, y, w, h, r, n=10):
+def rounded_rect(x, y, w, h, r, n=4):
+    """Corner arcs of n points, with two points on every straight side so the curve
+    leaves each corner along the side instead of overshooting it."""
     pts = []
-    for cx, cy, a0 in ((x + w - r, y + r, -90), (x + w - r, y + h - r, 0), (x + r, y + h - r, 90), (x + r, y + r, 180)):
-        for i in range(n):
-            a = math.radians(a0 + 90 * i / (n - 1))
-            pts.append((cx + r * math.cos(a), cy + r * math.sin(a)))
+    corners = ((x + w - r, y + r, -90), (x + w - r, y + h - r, 0), (x + r, y + h - r, 90), (x + r, y + r, 180))
+    for k, (cx, cy, a0) in enumerate(corners):
+        arc = [(cx + r * math.cos(math.radians(a0 + 90 * i / (n - 1))), cy + r * math.sin(math.radians(a0 + 90 * i / (n - 1)))) for i in range(n)]
+        pts += arc
+        nx, ny, na = corners[(k + 1) % 4]
+        nxt = (nx + r * math.cos(math.radians(na)), ny + r * math.sin(math.radians(na)))
+        end = arc[-1]
+        for t in (0.2, 0.8):
+            pts.append((end[0] + (nxt[0] - end[0]) * t, end[1] + (nxt[1] - end[1]) * t))
     return np.array(pts), True
 
 

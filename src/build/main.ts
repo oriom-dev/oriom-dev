@@ -6,8 +6,7 @@ import { gzipSync } from 'node:zlib';
 import { VARIANTS, type Post, type SiteBundle } from '../shared/types.ts';
 import { oklchToLinearSrgb } from '../shared/color.ts';
 import { mdPath } from '../shared/routes.ts';
-import { artAttr } from '../shared/art.ts';
-import { ROOT, loadBadges, loadPosts, loadWorks } from './content.ts';
+import { ROOT, loadPosts, loadWorks } from './content.ts';
 import { strokeIcon } from './png.ts';
 import { ORIGIN, PUBLICATION_URI } from './render.ts';
 import { bundleJs } from './templates.ts';
@@ -22,10 +21,7 @@ export function buildSite(extraPosts: Post[] = []): SiteBundle {
   const templates = Object.fromEntries(VARIANTS.map((v) => [v, template(v)])) as SiteBundle['templates'];
   const scriptHashes = Object.fromEntries(VARIANTS.map((v) => [v, inlineScriptHashes(templates[v])])) as SiteBundle['scriptHashes'];
   const version = createHash('sha256').update(JSON.stringify({ templates, pages })).digest('hex').slice(0, 12);
-  const badges = loadBadges().map((b) => ({
-    kind: 'badge' as const, path: b.share, title: b.name, date: b.issuedOn.slice(0, 10), summary: b.issuer.name, ...(b.art ? { art: artAttr(b.art) } : {}),
-  }));
-  return { version, builtAt: new Date().toISOString(), templates, scriptHashes, pages, badges };
+  return { version, builtAt: new Date().toISOString(), templates, scriptHashes, pages };
 }
 
 /** CSP hashes of executable inline scripts (JSON data blocks are not executed). */

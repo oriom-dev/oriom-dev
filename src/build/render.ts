@@ -8,7 +8,10 @@ export const ORIGIN = 'https://oriom.dev';
 export const PUBLICATION_URI = process.env.PUBLICATION_URI || loadStandard().publication;
 
 const marked = new Marked({ gfm: true, async: false });
-export const mdToHtml = (md: string) => marked.parse(md) as string;
+/** Links to other sites open in a new tab. */
+export const externalLinks = (html: string) =>
+  html.replace(/<a href="(https?:\/\/(?!oriom\.dev[/"])[^"]*)"(?![^>]*\starget=)/g, '<a href="$1" target="_blank" rel="noopener"');
+export const mdToHtml = (md: string) => externalLinks(marked.parse(md) as string);
 
 export const esc = (s: string) =>
   s.replace(/[&<>"']/g, (c) => `&${({ '&': 'amp', '<': 'lt', '>': 'gt', '"': 'quot', "'": '#39' } as const)[c as '&']};`);
@@ -49,9 +52,25 @@ const postLine = (p: Post) =>
   `- ${p.date} [${mdText(p.title)}](${p.path})${p.author.did !== AUTHOR.did ? `（${mdText(p.author.name)}）` : ''}`;
 
 const badgeItem = (b: Badge) =>
-  `<li><a href="${esc(b.share)}">${b.art ? figure(b.art, b.art.title ?? b.name, 'thumb') : ''}`
+  `<li><a href="/badges/${b.slug}">${b.art ? figure(b.art, b.art.title ?? b.name, 'thumb') : ''}`
   + `<b>${esc(b.name)}</b><span>${esc(b.issuer.name)}</span><time datetime="${ymd(b.issuedOn)}">${ymd(b.issuedOn)}</time></a></li>`;
-const badgeLine = (b: Badge) => `- [${mdText(b.name)}](${b.share})：${b.issuer.name}・${ymd(b.issuedOn)}`;
+const badgeLine = (b: Badge) => `- [${mdText(b.name)}](/badges/${b.slug})：${b.issuer.name}・${ymd(b.issuedOn)}`;
+
+/** A badge: its drawing, who issued it and when, what it stands for, and the issuer's page. */
+export function badgeMarkdown(b: Badge, target: Target = 'md'): string {
+  const criteria = b.criteria.replace(/\s*\n\s*/g, ' ');
+  if (target === 'md') {
+    return [`# ${b.name}`, `${b.issuer.name} · ${ymd(b.issuedOn)}`, b.description, criteria && `> ${criteria}`, `[${b.issuer.name} のページ](${b.share})`].filter(Boolean).join('\n\n');
+  }
+  return [
+    `# ${b.name}`,
+    b.art ? figure(b.art, b.art.title ?? b.name, 'hero badge') : '',
+    `<ul class="facts"><li>${esc(b.issuer.name)}</li><li><time datetime="${ymd(b.issuedOn)}">${ymd(b.issuedOn)}</time></li></ul>`,
+    b.description.split(/\n{2,}/).map((p) => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`).join(''),
+    criteria ? `<blockquote><p>${esc(criteria)}</p></blockquote>` : '',
+    `<ul class="links"><li><a href="${esc(b.share)}">${esc(b.issuer.name)} のページ</a></li></ul>`,
+  ].filter(Boolean).join('\n\n');
+}
 
 const LINKS = [
   ['GitHub', 'https://github.com/oriom-dev', '@oriom-dev'],

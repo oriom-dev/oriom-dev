@@ -97,8 +97,6 @@ export interface SiteBundle {
   /** script-src hashes per template, for the Content-Security-Policy header. */
   scriptHashes: Record<Variant, string[]>;
   pages: Record<string, PageOut>;
-  /** Badges are not pages: they link to the issuer. */
-  badges?: Item[];
   stats?: Stats;
 }
 
