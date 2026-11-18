@@ -1,6 +1,6 @@
 // The same shading in WGSL (WebGPU) and GLSL ES 3.0 (WebGL 2). Uniform block layout
 // (floats): viewProj[16] invViewProj[16] cam[4: xyz, time] sun[4: dir, daylight]
-// zenith[4: rgb, fog density] horizon[4] light[4: ambient, lamp glow, night vision, -] moon[4: dir, -].
+// zenith[4: rgb, fog density] horizon[4: rgb, sunrise/sunset glow] light[4: ambient, lamp glow, night vision, -] moon[4: dir, -].
 // Blocks: 0 air 1 grass 2 dirt 3 stone 4 sand 5 water 6 log 7 leaves 8 snow
 //         9 lamp off 10 lamp on 11 plank 12 gravel
 
@@ -62,6 +62,9 @@ struct SO { @builtin(position) pos: vec4f, @location(0) ndc: vec2f };
   let w = u.ivp * vec4f(i.ndc, 1.0, 1.0);
   let dir = normalize(w.xyz / w.w - u.cam.xyz);
   var c = mix(u.horizon.rgb, u.zenith.rgb, smoothstep(-0.02, 0.5, dir.y));
+  // the glow of sunrise and sunset: low in the sky, strongest towards the sun
+  let toSun = max(0.0, dot(normalize(dir.xz + vec2f(1e-5)), normalize(u.sun.xz + vec2f(1e-5))));
+  c = mix(c, vec3f(0.98, 0.52, 0.26), u.horizon.w * (0.25 + 0.75 * toSun * toSun) * (1.0 - smoothstep(-0.05, 0.45, dir.y)));
   let s = dot(dir, u.sun.xyz);
   c += vec3f(1.0, 0.95, 0.85) * (smoothstep(0.99955, 0.99970, s) * 1.5 + pow(max(s, 0.0), 64.0) * 0.06 * u.sun.w);
   let night = 1.0 - smoothstep(0.0, 0.35, u.sun.w);
@@ -128,6 +131,8 @@ in vec2 ndc; out vec4 o;
 void main() {
   vec4 w = ivp * vec4(ndc, 1.0, 1.0); vec3 dir = normalize(w.xyz / w.w - cam.xyz);
   vec3 c = mix(horizon.rgb, zenith.rgb, smoothstep(-0.02, 0.5, dir.y));
+  float toSun = max(0.0, dot(normalize(dir.xz + vec2(1e-5)), normalize(sun.xz + vec2(1e-5))));
+  c = mix(c, vec3(0.98, 0.52, 0.26), horizon.w * (0.25 + 0.75 * toSun * toSun) * (1.0 - smoothstep(-0.05, 0.45, dir.y)));
   float s = dot(dir, sun.xyz);
   c += vec3(1.0, 0.95, 0.85) * (smoothstep(0.99955, 0.99970, s) * 1.5 + pow(max(s, 0.0), 64.0) * 0.06 * sun.w);
   float night = 1.0 - smoothstep(0.0, 0.35, sun.w);

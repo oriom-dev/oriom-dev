@@ -1,6 +1,5 @@
 // 3D: walk around a block world generated from noise. Every work and post stands on
 // a sign around the plaza; opening one shows the page in the popup, in place.
-import { oklchToLinearSrgb } from '../../shared/color.ts';
 import { bytes } from '../../shared/stats.ts';
 import type { Item, Stats } from '../../shared/types.ts';
 import { NO3D_COOKIE } from '../../shared/variant.ts';
@@ -9,6 +8,7 @@ import { boot, readStats } from '../common.ts';
 import { initPopup } from '../popup/popup.ts';
 import { webgl2 } from './gl.ts';
 import { webgpu } from './gpu.ts';
+import { moon as moonPos, place, sun as sunPos, toVector } from './astro.ts';
 import { FIRST_RING, firstSeat, ringLayout } from './layout.ts';
 import { forward, invert, mul, perspective, view } from './math.ts';
 import { meshChunk } from './mesh.ts';
@@ -25,7 +25,6 @@ const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as 
 const canvas = $<HTMLCanvasElement>('view');
 const tip = $('tip');
 const mobile = matchMedia('(pointer:coarse)').matches;
-const hue = Number(root.style.getPropertyValue('--h')) || 220;
 const popped = () => root.classList.contains('popped');
 
 // ---------------------------------------------------------------- popup
@@ -210,34 +209,41 @@ function updateChunks(budgetMs: number): void {
 }
 
 // ---------------------------------------------------------------- sky and time
-const srgb = (l: number, c: number, h: number) =>
-  oklchToLinearSrgb(l, c, h).map((v) => { v = Math.max(0, Math.min(1, v)); return v <= 0.0031308 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - 0.055; });
 const mix = (a: number[], b: number[], t: number) => a.map((v, i) => v + (b[i]! - v) * t);
-const DAY_Z = srgb(0.66, 0.11, hue), DAY_H = srgb(0.88, 0.05, hue);
-const NIGHT_Z = srgb(0.13, 0.03, hue), NIGHT_H = srgb(0.22, 0.04, hue);
-const DUSK = srgb(0.72, 0.13, 45);
-
-const SYNODIC = 29.530588853; // days
-const NEW_MOON = Date.UTC(2000, 0, 6, 18, 14); // a known new moon
+// the sky keeps its own, ordinary colours (sRGB): the page's random hue is for the
+// signs and the popup, not for the world
+const hex = (h: number) => [(h >> 16) / 255, ((h >> 8) & 255) / 255, (h & 255) / 255];
+const DAY_Z = hex(0x78a7ff), DAY_H = hex(0xc4dcff);
+const NIGHT_Z = hex(0x05070f), NIGHT_H = hex(0x10172a);
+const DUSK = hex(0xf2a35e);
 
 // ?at=2026-11-24T23:00 shows the sky of another moment (sun, moon phase, stars); an
 // invalid value is ignored and the visitor's own time is used
 const atParam = new URLSearchParams(location.search).get('at');
 const atTime = atParam && !Number.isNaN(Date.parse(atParam)) ? Date.parse(atParam) : null;
+const here = place();
+/** How light the sky is for the sun at `alt` degrees: full day from 6° up, then civil
+ *  (0°..-6°), nautical (..-12°) and astronomical (..-18°) twilight down to the night. */
+function daylight(alt: number): number {
+  const stops: [number, number][] = [[-18, 0], [-12, 0.05], [-6, 0.25], [0, 0.7], [6, 1]];
+  if (alt <= -18) return 0;
+  if (alt >= 6) return 1;
+  for (let i = 1; i < stops.length; i++) {
+    const [a1, v1] = stops[i]!, [a0, v0] = stops[i - 1]!;
+    if (alt <= a1) return v0 + ((v1 - v0) * (alt - a0)) / (a1 - a0);
+  }
+  return 1;
+}
 function sky() {
-  const d = atTime !== null ? new Date(atTime) : new Date();
-  const hours = d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600;
-  const a = ((hours - 6) / 24) * Math.PI * 2; // sunrise in the east (+x) at 6:00
-  // sun and moon share one great circle, tilted towards the south (+z)
-  const TILT = 0.5;
-  const onPath = (t: number) => [Math.cos(t), Math.sin(t) * Math.cos(TILT), Math.sin(t) * Math.sin(TILT)];
-  const sun = onPath(a);
-  // the moon trails the sun by its elongation: new moon with the sun, full moon opposite
-  const age = ((((d.getTime() - NEW_MOON) / 86_400_000) % SYNODIC) + SYNODIC) % SYNODIC;
-  const moon = onPath(a - (age / SYNODIC) * Math.PI * 2);
-  const day = Math.min(1, Math.max(0, (sun[1]! + 0.08) / 0.35));
-  const dusk = Math.max(0, 1 - Math.abs(sun[1]!) / 0.22);
-  return { sun, moon, day, zenith: mix(NIGHT_Z, DAY_Z, day), horizon: mix(mix(NIGHT_H, DAY_H, day), DUSK, dusk * 0.6) };
+  const t = atTime ?? Date.now();
+  // the real sun and moon for where the visitor is: their rising, setting and phase
+  const sh = sunPos(t, here);
+  const sun = toVector(sh);
+  const moon = toVector(moonPos(t, here));
+  const day = daylight(sh.alt);
+  // the glow of sunrise and sunset, from a little above the horizon to nautical twilight
+  const dusk = Math.max(0, 1 - Math.abs(sh.alt + 3) / 9);
+  return { sun, moon, day, zenith: mix(NIGHT_Z, DAY_Z, day), horizon: mix(mix(NIGHT_H, DAY_H, day), DUSK, dusk * 0.3), dusk };
 }
 
 // ---------------------------------------------------------------- input
@@ -422,7 +428,7 @@ async function start(): Promise<void> {
     u.set([eye[0]!, eye[1]!, eye[2]!, now / 1000], 32);
     u.set([...s.sun, s.day], 36);
     u.set([...s.zenith, fog], 40);
-    u.set([...s.horizon, 1], 44);
+    u.set([...s.horizon, s.dusk * 0.75], 44);
     u.set([0.2 + 0.4 * s.day, 1 - s.day, night ? 1 : 0, 0], 48);
     u.set([...s.moon, 0], 52);
     const f = forward(player.yaw, 0);
