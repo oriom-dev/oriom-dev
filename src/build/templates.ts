@@ -35,13 +35,16 @@ const icon = (variant: Variant) => {
  * The full page minus the slots filled at serve time:
  * <!--@head--> page meta, <!--@body--> content, <!--@stats--> JSON, __HUE__ hue.
  */
-export function template(variant: Variant, extra: { before?: string; after?: string } = {}): string {
+export function template(variant: Variant, slots: Record<string, string> = {}): string {
   const dir = path.join(CLIENT, variant);
   const css = minCss(
     paletteCss() + readFileSync(path.join(CLIENT, 'base.css'), 'utf8') + readFileSync(path.join(dir, 'style.css'), 'utf8'),
   );
   const js = bundleJs(path.join(dir, 'main.ts')).replace(/<\/script/gi, '<\\/script');
-  const html = existsSync(path.join(dir, 'shell.html')) ? readFileSync(path.join(dir, 'shell.html'), 'utf8').trim() : '<main id="c"><!--@body--></main>';
+  let html = existsSync(path.join(dir, 'shell.html')) ? readFileSync(path.join(dir, 'shell.html'), 'utf8').trim() : '<main id="c"><!--@body--></main>';
+  // build-time slots (site-wide parts such as the 2D map); serve-time slots stay
+  for (const [k, v] of Object.entries(slots)) html = html.replace(`<!--#${k}-->`, () => v);
+  html = html.replace(/>\s+</g, '><');
   return '<!doctype html>'
     + `<html lang="ja" data-v="${variant}" style="--h:__HUE__">`
     + '<head><meta charset="utf-8">'
@@ -50,7 +53,7 @@ export function template(variant: Variant, extra: { before?: string; after?: str
     + `<link rel="icon" href="${icon(variant)}">`
     + '<!--@head-->'
     + `<style>${css}</style></head>`
-    + `<body><a class="skip" href="#c">本文へ移動</a>${extra.before ?? ''}${html}${extra.after ?? ''}`
+    + `<body><a class="skip" href="#c">本文へ移動</a>${html}`
     + '<script type="application/json" id="stats"><!--@stats--></script>'
     + `<script>${js}</script></body></html>`;
 }

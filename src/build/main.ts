@@ -6,6 +6,7 @@ import { gzipSync } from 'node:zlib';
 import { VARIANTS, type PageOut, type SiteBundle } from '../shared/types.ts';
 import { ROOT, loadPages, loadPosts, loadWorks } from './content.ts';
 import { expand, page, postMarkdown, workMarkdown } from './render.ts';
+import { graphHtml, layout } from './graph.ts';
 import { template } from './templates.ts';
 
 export function buildSite(): SiteBundle {
@@ -30,7 +31,8 @@ export function buildSite(): SiteBundle {
     add(page({ path: p.path, title: p.title, description: p.description, type: 'article', atUri: p.atUri, published: p.date }, postMarkdown(p)));
   }
 
-  const templates = Object.fromEntries(VARIANTS.map((v) => [v, template(v)])) as SiteBundle['templates'];
+  const slots = { map: graphHtml(layout(works)) };
+  const templates = Object.fromEntries(VARIANTS.map((v) => [v, template(v, slots)])) as SiteBundle['templates'];
   const scriptHashes = Object.fromEntries(VARIANTS.map((v) => [v, inlineScriptHashes(templates[v])])) as SiteBundle['scriptHashes'];
   const version = createHash('sha256').update(JSON.stringify({ templates, pages })).digest('hex').slice(0, 12);
   return { version, builtAt: new Date().toISOString(), templates, scriptHashes, pages };
