@@ -75,6 +75,8 @@ export class App {
 
   load(): void {
     this.site = JSON.parse(readFileSync(path.join(this.distDir, 'site.json'), 'utf8'));
+    this.base = this.site.pages;
+    if (this.extra && Object.keys(this.extra).length) this.site.pages = { ...this.base, ...this.extra };
     this.files.clear();
     const add = (route: string, file: string, type: string) => {
       const f = path.join(this.distDir, file);
@@ -90,6 +92,16 @@ export class App {
     add('/llms.txt', 'llms.txt', 'text/plain; charset=utf-8');
     add('/.well-known/site.standard.publication', 'site.standard.publication', 'text/plain; charset=utf-8');
   }
+
+  private extra: Record<string, PageOut> = {};
+
+  /** Pages built at run time (posts from followed sites), merged over the built ones. */
+  setPages(pages: Record<string, PageOut>): void {
+    this.extra = pages;
+    this.site = { ...this.site, pages: { ...this.base, ...pages } };
+  }
+
+  private base: Record<string, PageOut> = {};
 
   /** Reload dist/ when a new build lands (dev, and atomic deploys). */
   watch(): void {

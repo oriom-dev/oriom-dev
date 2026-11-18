@@ -11,6 +11,22 @@ const stats = startStats(counter, { agentSocket: env.CLUSTER_AGENT_SOCKET });
 const app = new App(counter, stats);
 if (env.NODE_ENV === 'development') app.watch();
 
+// Posts from followed standard.site publications: rebuild the pages (not the templates).
+if (env.FEEDS !== '0') {
+  const { fetchFollowed } = await import('./feeds.ts');
+  const { buildPages } = await import('../build/pages.ts');
+  const { loadPosts, loadStandard, loadWorks } = await import('../build/content.ts');
+  const refresh = async () => {
+    const team = await fetchFollowed(loadStandard().follow);
+    const posts = [...loadPosts(), ...team].sort((a, b) => b.date.localeCompare(a.date));
+    app.setPages(buildPages(loadWorks(), posts));
+    if (team.length) console.log(`feeds: ${team.length} posts from followed sites`);
+  };
+  const tick = () => refresh().catch((e) => console.warn('feeds:', e));
+  tick();
+  setInterval(tick, 15 * 60_000).unref();
+}
+
 // Behind Caddy: trust X-Forwarded-For only from loopback.
 const clientOf = (req: http.IncomingMessage) => {
   const remote = req.socket.remoteAddress ?? '';

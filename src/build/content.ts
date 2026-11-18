@@ -55,9 +55,17 @@ export function loadArt(name: string): Art | undefined {
   return existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : undefined;
 }
 
+export interface StandardConfig {
+  publication: string;
+  documents: Record<string, { uri: string; hash: string }>;
+  follow: { handle: string; name: string }[];
+}
+export const loadStandard = (): StandardConfig => JSON.parse(readFileSync(path.join(CONTENT, 'standard.json'), 'utf8'));
+
 export const AUTHOR = { name: 'oriom', handle: 'oriom.dev', did: 'did:plc:p4woeawvwwrsvh6mjp5cvufu' };
 
 export function loadPosts(): Post[] {
+  const standard = loadStandard();
   return readDir('posts')
     .map(({ name, meta, body }) => ({
       slug: name,
@@ -69,7 +77,7 @@ export function loadPosts(): Post[] {
       tags: meta.tags ?? [],
       body,
       author: AUTHOR,
-      atUri: meta.atUri,
+      atUri: standard.documents[name]?.uri,
     }))
     .sort((a, b) => b.date.localeCompare(a.date));
 }

@@ -2,10 +2,10 @@ import { Marked } from 'marked';
 import { artAttr, curve, decode, type Art } from '../shared/art.ts';
 import { mdPath } from '../shared/routes.ts';
 import type { PageOut, Post, Work } from '../shared/types.ts';
-import { AUTHOR } from './content.ts';
+import { AUTHOR, loadStandard } from './content.ts';
 
 export const ORIGIN = 'https://oriom.dev';
-export const PUBLICATION_URI = process.env.PUBLICATION_URI ?? '';
+export const PUBLICATION_URI = process.env.PUBLICATION_URI || loadStandard().publication;
 
 const marked = new Marked({ gfm: true, async: false });
 export const mdToHtml = (md: string) => marked.parse(md) as string;
@@ -41,8 +41,9 @@ export const workItem = (w: Work) =>
 
 const workLine = (w: Work) =>
   `- [${w.title}](/works/${w.slug})${w.date ? `（${w.date.slice(0, 4)}）` : ''}：${w.summary}${w.awards.length ? ` 🏆×${w.awards.length}` : ''}`;
+const mdText = (s: string) => s.replace(/[\\`*_[\]<>#|]/g, (c) => `\\${c}`);
 const postLine = (p: Post) =>
-  `- ${p.date} [${p.title}](${p.path})${p.author.did !== AUTHOR.did ? `（${p.author.name}）` : ''}`;
+  `- ${p.date} [${mdText(p.title)}](${p.path})${p.author.did !== AUTHOR.did ? `（${mdText(p.author.name)}）` : ''}`;
 
 const LINKS = [
   ['GitHub', 'https://github.com/oriom-dev', '@oriom-dev'],
@@ -98,10 +99,18 @@ export function workMarkdown(w: Work, target: Target = 'md'): string {
   ].filter(Boolean).join('\n\n');
 }
 
-export function postMarkdown(p: Post): string {
+/** Text from another site is plain text: never let it become HTML or Markdown markup. */
+const plain = (s: string, target: Target) =>
+  target === 'html'
+    ? s.split(/\n{2,}/).map((para) => `<p>${esc(para).replace(/\n/g, '<br>')}</p>`).join('\n\n')
+    : s;
+
+export function postMarkdown(p: Post, target: Target = 'md'): string {
   const by = p.author.did === AUTHOR.did ? '' : `・${p.author.name}`;
   const ext = p.external ? `\n\n元の記事：<${p.external}>` : '';
-  return `# ${p.title}\n\n${p.date}${by}${p.tags.length ? `・${p.tags.map((t) => `#${t}`).join(' ')}` : ''}\n\n${p.body}${ext}\n\n[← 記事一覧](/blog)`;
+  const body = p.external ? plain(p.body, target) : p.body;
+  const title = p.external && target === 'html' ? esc(p.title) : p.title;
+  return `# ${title}\n\n${p.date}${by}${p.tags.length ? `・${p.tags.map((t) => `#${target === 'html' ? esc(t) : t}`).join(' ')}` : ''}\n\n${body}${ext}\n\n[← 記事一覧](/blog)`;
 }
 
 export interface HeadMeta { path: string; title: string; description: string; type?: 'website' | 'article'; atUri?: string; published?: string }
