@@ -1,0 +1,27 @@
+{
+  "slug": "quantum-business",
+  "assertion": "https://nlp.netlearning.co.jp/api/v1.0/openbadge/v2/Assertion/M1pLTDNESFVBR2JGWFJWK0pMZSszZz09",
+  "share": "https://www.openbadge-global.com/api/v1.0/openBadge/v2/Wallet/Public/GetAssertionShare/M1pLTDNESFVBR2JGWFJWK0pMZSszZz09",
+  "name": "Quantum Business for you (量子コンピュータ実践的スタートアップ創出講座)",
+  "description": "量子アニーリングマシン（D-Wave Systems社製）を利用して、量子アニーリングを利用したプログラミングや量子アニーリングを応用したアプリを開発を行う。\n量子アニーリングを応用する事例について知識を有すること、さらに事業化、起業を目指したグループワークを実施する。\n特に・Webアプリの作成\n       ・ブラックボックス最適化を利用したWebインターフェースの \n          実装\n      ・事業化計画の設計\nを行う。",
+  "criteria": "合計5回・時間にして36時間程度の講義部分について量子アニーリングのプログラミング講座およびアプリの開発講座を聞き、その後5-6人程度のグループを形成し、4週間のグループワーク内において、企画、プログラミング、プレゼンテーションのいずれかの役割を分担し、\n広く量子アニーリング技術を用いたアプリ（Webブラウザ・スマートフォン上で動作）を作成する活動を行う。\nその間に演習編と称する2回に及ぶ約20時間の議論の時間が設けられ\n他のグループとの交流やデモンストレーションの磨き上げを行う。\nさらに4週間の制作期間（オンラインミーティングを日々重ねて）を経た後に実施される卒業試験の日程において各グループより数分程度のプレゼンテーションを行い完成品のデモンストレーションを実施し12時間程度の議論を行う。\n\nQB4U　https://altema.is.tohoku.ac.jp/QB4U/",
+  "tags": [
+    "・量子アニ―リングマシンの利用法、およびデータベース、Webアプリケーション開発の基礎。",
+    "・量子アニーリングの理論的理解、実用の観点からの企画、考察",
+    "・量子ビジネスの創出"
+  ],
+  "issuer": {
+    "name": "東北大学大学院情報科学研究科",
+    "url": "https://www.is.tohoku.ac.jp/",
+    "id": "https://nlp.netlearning.co.jp/api/v1.0/openbadge/v2/Issuer/ZndnOWM2WWVjOEFtczJ6VWhwRCtYUT09"
+  },
+  "issuedOn": "2024-10-01T00:00:00+09:00",
+  "expires": null,
+  "recipient": {
+    "identity": "sha256$47bbe8306d8e1b140a5aeae8bb76e8f9e99b73a4db24bfcfff60b03f57f5f5bc",
+    "type": "email",
+    "hashed": true,
+    "salt": "099806ef21f538392994b5dee8f5c2d0"
+  },
+  "verification": "HostedBadge"
+}

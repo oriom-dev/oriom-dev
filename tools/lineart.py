@@ -161,6 +161,21 @@ def procedural(fn):
         legs = bezier((175, 239), (170, 262), (160, 280), (150, 300), 8)
         legs2 = bezier((175, 239), (180, 262), (190, 280), (200, 300), 8)
         return [curtain_l, top, curtain_r, floor, cam, lens, legs, legs2]
+    if fn in ('badge-ai', 'badge-quantum'):  # Open Badges: the arched shield, and its emblem
+        a = np.linspace(np.pi, 2 * np.pi, 28)
+        arch = np.c_[100 + 100 * np.cos(a), 100 + 100 * np.sin(a)]
+        shield = np.vstack([arch, [[200, 120], [200, 210]], bezier((200, 210), (200, 225), (190, 232), (175, 232), 6)[0],
+                            [[25, 232]], bezier((25, 232), (10, 232), (0, 225), (0, 210), 6)[0], [[0, 120]]])
+        out = [(shield, True), (np.array([[12, 196], [188, 196]], float), False)]
+        if fn == 'badge-ai':
+            out += [circle(100, 85, 34, 24), (np.array([[45, 145], [155, 145]], float), False), (np.array([[60, 168], [140, 168]], float), False)]
+        else:
+            t = np.linspace(0, 2 * np.pi, 30, endpoint=False)
+            for rot in (0, np.pi / 3, -np.pi / 3):
+                x, y = 46 * np.cos(t), 16 * np.sin(t)
+                out.append((np.c_[100 + x * np.cos(rot) - y * np.sin(rot), 105 + x * np.sin(rot) + y * np.cos(rot)], True))
+            out.append(circle(100, 105, 6, 12))
+        return out
     raise ValueError(fn)
 
 

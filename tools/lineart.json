@@ -66,5 +66,15 @@
     "fn": "stage",
     "title": "幕の開いたステージと配信カメラ",
     "keep_order": true
+  },
+  "badge-ai-literacy": {
+    "mode": "proc",
+    "fn": "badge-ai",
+    "title": "アーチ形のバッジと紋章"
+  },
+  "badge-quantum-business": {
+    "mode": "proc",
+    "fn": "badge-quantum",
+    "title": "アーチ形のバッジと原子の軌道"
   }
 }

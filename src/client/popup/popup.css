@@ -29,3 +29,11 @@
 .pop .thread.draw path{animation:draw 2.4s cubic-bezier(.3,.1,.2,1) forwards}
 @keyframes draw{from{stroke-dashoffset:var(--len)}to{stroke-dashoffset:0}}
 html.popped body{overflow:hidden}
+.pop .badge-check{display:flex;flex-wrap:wrap;gap:.5rem .75rem;align-items:center;margin:0 0 .5rem}
+.pop .badge-check label{display:flex;flex-wrap:wrap;gap:.25rem .75rem;align-items:center;color:var(--muted);font-size:.9em}
+.pop .badge-check input{font:inherit;color:var(--fg);background:transparent;border:0;border-bottom:1px solid var(--line);padding:.2rem 0;min-width:min(16rem,70vw)}
+.pop .badge-check input:focus{outline:none;border-bottom-width:2px}
+.pop .badge-check button{font:inherit;color:var(--fg);background:transparent;border:0;font-weight:400;cursor:pointer;padding:.2rem .25rem}
+.pop .badge-check output{flex-basis:100%;font-size:.9em}
+.pop .note{color:var(--muted);font-size:.8em}
+.pop figure.badge{max-width:9rem;margin:1rem 0 1.5rem}

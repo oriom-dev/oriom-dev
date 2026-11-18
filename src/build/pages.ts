@@ -1,12 +1,12 @@
 // Markdown -> pages. No esbuild here: the server imports this at run time.
-import type { Comments, PageOut, Post, Work } from '../shared/types.ts';
+import type { BadgeStatus, Comments, PageOut, Post, Work } from '../shared/types.ts';
 import { artAttr } from '../shared/art.ts';
-import { AUTHOR, loadPages } from './content.ts';
+import { AUTHOR, loadBadges, loadPages } from './content.ts';
 import { expand, page, postMarkdown, workMarkdown } from './render.ts';
 
 /** Pages only (no esbuild): the server calls this again when followed sites post. */
-export function buildPages(works: Work[], posts: Post[], comments: Comments = {}): Record<string, PageOut> {
-  const ctx = { works, posts };
+export function buildPages(works: Work[], posts: Post[], comments: Comments = {}, badgeStatus: Record<string, BadgeStatus> = {}): Record<string, PageOut> {
+  const ctx = { works, posts, badges: loadBadges(), badgeStatus };
   const pages: Record<string, PageOut> = {};
   const add = (p: PageOut) => {
     if (pages[p.path]) throw new Error(`duplicate page ${p.path}`);

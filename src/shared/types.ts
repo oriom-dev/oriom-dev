@@ -47,6 +47,24 @@ export interface Comment {
   replies: Comment[];
 }
 
+export interface Badge {
+  slug: string;
+  assertion: string;
+  share: string;
+  name: string;
+  description: string;
+  criteria: string;
+  tags: string[];
+  issuer: { name: string; url?: string; id: string };
+  issuedOn: string;
+  expires: string | null;
+  recipient: { type: string; hashed: boolean; identity: string; salt?: string };
+  verification: string;
+  art?: import('./art.ts').Art;
+}
+
+export interface BadgeStatus { ok: boolean; at: string; note: string }
+
 /** Comments per post path: the Bluesky thread URL and its replies. */
 export type Comments = Record<string, { url: string; count: number; comments: Comment[] }>;
 

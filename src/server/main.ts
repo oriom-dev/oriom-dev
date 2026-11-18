@@ -26,7 +26,10 @@ if (env.FEEDS !== '0') {
       if (!p.bsky) continue;
       try { comments[p.path] = await fetchComments(p.bsky.uri); } catch (e) { console.warn(`comments ${p.path}:`, (e as Error).message); }
     }
-    app.setPages(buildPages(loadWorks(), posts, comments));
+    const { loadBadges } = await import('../build/content.ts');
+    const { verify } = await import('./badges.ts');
+    const badgeStatus = Object.fromEntries(await Promise.all(loadBadges().map(async (b) => [b.slug, await verify(b)] as const)));
+    app.setPages(buildPages(loadWorks(), posts, comments, badgeStatus));
   };
   const tick = () => refresh().catch((e) => console.warn('refresh:', e));
   tick();

@@ -2,7 +2,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import type { Art } from '../shared/art.ts';
-import type { Post, Work } from '../shared/types.ts';
+import type { Badge, Post, Work } from '../shared/types.ts';
 
 export const ROOT = path.resolve(import.meta.dirname, '../..');
 const CONTENT = path.join(ROOT, 'content');
@@ -54,6 +54,13 @@ export function loadWorks(): Work[] {
 export function loadArt(name: string): Art | undefined {
   const f = path.join(CONTENT, 'art', `${name}.json`);
   return existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : undefined;
+}
+
+export function loadBadges(): Badge[] {
+  const dir = path.join(CONTENT, 'badges');
+  if (!existsSync(dir)) return [];
+  const order: { slug: string }[] = JSON.parse(readFileSync(path.join(CONTENT, 'badges.json'), 'utf8'));
+  return order.map(({ slug }) => ({ ...JSON.parse(readFileSync(path.join(dir, `${slug}.json`), 'utf8')), art: loadArt(`badge-${slug}`) }));
 }
 
 export interface StandardConfig {

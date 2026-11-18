@@ -115,3 +115,19 @@ export function initPopup(hooks: { onOpen?(path: string): void; onClose?(): void
   }
   return api;
 }
+
+// Open Badges: check a recipient address against the assertion's salted hash, locally.
+document.addEventListener('submit', async (e) => {
+  const form = (e.target as Element).closest?.('form.badge-check') as HTMLFormElement | null;
+  if (!form) return;
+  e.preventDefault();
+  const out = form.querySelector('output')!;
+  const email = (new FormData(form).get('email') as string | null)?.trim() ?? '';
+  if (!email) { out.textContent = ''; return; }
+  const [alg, want] = (form.dataset.identity ?? '').split('$');
+  if (alg !== 'sha256' || !crypto.subtle) { out.textContent = 'このブラウザでは照合できません'; return; }
+  const hex = async (s: string) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s + (form.dataset.salt ?? ''))))]
+    .map((b) => b.toString(16).padStart(2, '0')).join('');
+  const ok = (await hex(email)) === want || (await hex(email.toLowerCase())) === want;
+  out.textContent = ok ? '✓ 一致しました：このアドレスに発行されたバッジです' : '✗ 一致しません';
+});

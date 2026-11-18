@@ -1,0 +1,12 @@
+[
+  {
+    "slug": "ai-literacy",
+    "assertion": "https://nlp.netlearning.co.jp/api/v1.0/openbadge/v2/Assertion/WDBZTDR3Zm40VlhRc3F0NmFMM1R6dz09",
+    "share": "https://www.openbadge-global.com/api/v1.0/openBadge/v2/Wallet/Public/GetAssertionShare/WDBZTDR3Zm40VlhRc3F0NmFMM1R6dz09"
+  },
+  {
+    "slug": "quantum-business",
+    "assertion": "https://nlp.netlearning.co.jp/api/v1.0/openbadge/v2/Assertion/M1pLTDNESFVBR2JGWFJWK0pMZSszZz09",
+    "share": "https://www.openbadge-global.com/api/v1.0/openBadge/v2/Wallet/Public/GetAssertionShare/M1pLTDNESFVBR2JGWFJWK0pMZSszZz09"
+  }
+]

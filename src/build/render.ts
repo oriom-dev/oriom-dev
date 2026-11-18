@@ -1,7 +1,7 @@
 import { Marked } from 'marked';
 import { artAttr, separatePath, type Art } from '../shared/art.ts';
 import { mdPath } from '../shared/routes.ts';
-import type { Comment, Comments, Item, PageOut, Post, Work } from '../shared/types.ts';
+import type { Badge, BadgeStatus, Comment, Comments, Item, PageOut, Post, Work } from '../shared/types.ts';
 import { AUTHOR, loadStandard } from './content.ts';
 
 export const ORIGIN = 'https://oriom.dev';
@@ -19,7 +19,7 @@ const KIND: Record<string, string> = {
 };
 export const kindLabel = (k: string) => KIND[k] ?? k;
 
-export interface Ctx { works: Work[]; posts: Post[] }
+export interface Ctx { works: Work[]; posts: Post[]; badges?: Badge[]; badgeStatus?: Record<string, BadgeStatus> }
 export type Target = 'md' | 'html';
 
 /**
@@ -69,11 +69,38 @@ export function expand(md: string, ctx: Ctx, target: Target = 'md'): string {
       case 'links':
         return LINKS.map(([l, u, t]) => `- ${l}：[${t}](${u})`).join('\n');
       case 'badges':
-        return '_準備中です。_';
+        return (ctx.badges ?? []).map((b) => badgeSection(b, ctx.badgeStatus?.[b.slug], target)).join('\n\n') || '_まだありません。_';
       default:
         throw new Error(`unknown directive {{${name}}}`);
     }
   });
+}
+
+const ymd = (s: string) => s.slice(0, 10);
+
+/** One badge: what it is, who issued it, whether the issuer still vouches for it, and
+ *  the recipient hash, which anyone who knows the address can check. */
+export function badgeSection(b: Badge, st: BadgeStatus | undefined, target: Target): string {
+  const status = st ? `${st.ok ? '✓ ' : '✗ '}${st.note}（${ymd(st.at)} に確認）` : '発行元への確認はまだです';
+  const hash = b.recipient.identity.replace(/^sha256\$/, '');
+  const rows: [string, string][] = [
+    ['発行者', b.issuer.url ? `[${b.issuer.name}](${b.issuer.url})` : b.issuer.name],
+    ['発行日', ymd(b.issuedOn)],
+    ['検証', status],
+    ['受領者', `メールアドレスの SHA-256（ソルト ${b.recipient.salt ?? 'なし'}）\`${hash.slice(0, 16)}…\``],
+  ];
+  const parts = [
+    `## ${b.name}`,
+    target === 'html' && b.art ? figure(b.art, b.art.title ?? b.name, 'badge') : '',
+    `| | |\n|---|---|\n${rows.map(([k, v]) => `| ${k} | ${v} |`).join('\n')}`,
+    b.description.replace(/\n{2,}/g, '\n\n'),
+    b.criteria && `**取得の条件**：${b.criteria.replace(/\s*\n\s*/g, ' ')}`,
+    target === 'html'
+      ? `<form class="badge-check" data-identity="${esc(b.recipient.identity)}" data-salt="${esc(b.recipient.salt ?? '')}"><label>受領者のメールアドレスで照合 <input type="email" name="email" autocomplete="off" spellcheck="false"></label> <button type="submit">照合</button> <output></output></form>\n\n<p class="note">入力したアドレスはこのブラウザの中でハッシュにするだけで、どこにも送りません。</p>`
+      : '',
+    `[アサーション（JSON）](${b.assertion})・[発行元のページ](${b.share})`,
+  ];
+  return parts.filter(Boolean).join('\n\n');
 }
 
 export function workMarkdown(w: Work, target: Target = 'md'): string {
