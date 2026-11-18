@@ -14,7 +14,8 @@ export function gopherServer(app: App, host: string, port: number): net.Server {
       const nl = buf.indexOf('\n');
       if (nl < 0) { if (buf.length > 1024) sock.destroy(); return; }
       sock.removeAllListeners('data');
-      sock.end(handle(app, buf.slice(0, nl).replace(/\r$/, '').split('\t')[0]!, host, port, sock.remoteAddress));
+      try { sock.end(handle(app, buf.slice(0, nl).replace(/\r$/, '').split('\t')[0]!, host, port, sock.remoteAddress)); }
+      catch (e) { console.warn('gopher:', e); sock.end(`3error\t\terror.host\t1\r\n.\r\n`); }
     });
     sock.on('error', () => {});
   });

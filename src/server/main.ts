@@ -1,5 +1,5 @@
 import http from 'node:http';
-import { App, type Req } from './app.ts';
+import { App, type Reply, type Req } from './app.ts';
 import { Counter } from './counter.ts';
 import { http09Server } from './http09.ts';
 import { startStats } from './stats.ts';
@@ -54,7 +54,9 @@ const server = http.createServer((req, res) => {
     client: clientOf(req),
     protocol: 'http',
   };
-  const reply = app.respond(r);
+  let reply: Reply;
+  try { reply = app.respond(r); }
+  catch (e) { console.warn('http:', e); reply = { status: 500, headers: { 'content-type': 'text/plain; charset=utf-8' }, body: 'error\n' }; }
   const body = typeof reply.body === 'string' ? Buffer.from(reply.body) : reply.body;
   res.writeHead(reply.status, { ...reply.headers, 'content-length': body.length });
   res.end(req.method === 'HEAD' ? undefined : body);

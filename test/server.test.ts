@@ -59,3 +59,15 @@ test('HTTP/0.9 returns the bare body and closes', async () => {
     srv.close();
   }
 });
+
+test('paths that scanners send never throw', async () => {
+  const { handle: gemini } = await import('../src/server/gemini.ts');
+  const { handle: gopher } = await import('../src/server/gopher.ts');
+  for (const path of ['//%2e%2e%2f%2eenv', '//', '///etc/passwd', '/%', '/%E0%A4%A', '//[::1', '/..%2f..%2fetc']) {
+    const r = app.respond({ path, protocol: 'http' });
+    assert.ok([200, 301, 400, 404].includes(r.status), `${path}: ${r.status}`);
+    assert.doesNotThrow(() => gopher(app, path, 'oriom.dev', 70), path);
+  }
+  assert.equal(app.respond({ path: '//index.md', protocol: 'http' }).status, 200); // "//" is a path, not a host
+  assert.match(gemini(app, 'gemini://oriom.dev/%E0%A4%A'), /^59 /);
+});

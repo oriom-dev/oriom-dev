@@ -16,7 +16,8 @@ export function geminiServer(app: App, opts: { key: Buffer; cert: Buffer }): tls
         return;
       }
       sock.removeAllListeners('data');
-      sock.end(handle(app, buf.slice(0, end), sock.remoteAddress));
+      try { sock.end(handle(app, buf.slice(0, end), sock.remoteAddress)); }
+      catch (e) { console.warn('gemini:', e); sock.end('40 error\r\n'); }
     });
     sock.on('error', () => {});
   });
@@ -26,7 +27,8 @@ export function handle(app: App, line: string, client?: string): string {
   let url: URL;
   try { url = new URL(line); } catch { return '59 bad request\r\n'; }
   if (url.protocol !== 'gemini:') return '53 proxy request refused\r\n';
-  const path = decodeURIComponent(url.pathname) || '/';
+  let path: string;
+  try { path = decodeURIComponent(url.pathname) || '/'; } catch { return '59 bad request\r\n'; }
   if (path === '/api/stats') return `20 application/json\r\n${app.statsJson()}`;
   const r = app.markdown(path, client, 'gemini');
   if (r.status === 301) return `31 ${r.location}\r\n`;

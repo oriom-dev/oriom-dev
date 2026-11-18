@@ -144,7 +144,11 @@ export class App {
   }
 
   respond(req: Req): Reply {
-    const url = new URL(req.path, 'http://x');
+    // "//evil" would be read as a host, and some paths do not parse at all (scanners send
+    // them): repeated slashes are one, and what still fails is a plain 400
+    let url: URL;
+    try { url = new URL(req.path.replace(/^\/+/, '/'), 'http://x'); }
+    catch { return { status: 400, headers: { 'content-type': 'text/plain; charset=utf-8', ...SECURITY }, body: 'bad request\n' }; }
     const file = this.files.get(url.pathname);
     if (file) {
       const cache = url.pathname === '/sw.js' ? 'no-cache' : 'public, max-age=3600';

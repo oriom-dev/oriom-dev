@@ -56,8 +56,10 @@ export function http09Server(app: App): net.Server {
       const m = /^GET (\/\S*)$/.exec(line);
       if (!m) { sock.end(); return; }
       // No headers in 0.9: no user agent, so never the 3D page.
-      const reply = app.respond({ path: m[1]!, protocol: 'http/0.9', client });
-      sock.end(reply.status === 301 ? app.respond({ path: reply.headers.location!, protocol: 'http/0.9', client }).body : reply.body);
+      try {
+        const reply = app.respond({ path: m[1]!, protocol: 'http/0.9', client });
+        sock.end(reply.status === 301 ? app.respond({ path: reply.headers.location!, protocol: 'http/0.9', client }).body : reply.body);
+      } catch (e) { console.warn('http/0.9:', e); sock.destroy(); }
     });
     sock.on('error', () => {});
   });
