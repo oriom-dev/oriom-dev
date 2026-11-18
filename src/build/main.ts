@@ -10,7 +10,7 @@ import { ROOT, loadPages, loadPosts, loadWorks } from './content.ts';
 import { strokeIcon } from './png.ts';
 import { ORIGIN, PUBLICATION_URI } from './render.ts';
 import { bundleJs } from './templates.ts';
-import { expand, page, postMarkdown, workMarkdown } from './render.ts';
+import { expand, page, postMarkdown, workItem, workMarkdown } from './render.ts';
 import { graphHtml, layout } from './graph.ts';
 import { template } from './templates.ts';
 
@@ -36,7 +36,10 @@ export function buildSite(): SiteBundle {
     add(page({ path: p.path, title: p.title, description: p.description, type: 'article', atUri: p.atUri, published: p.date }, postMarkdown(p)));
   }
 
-  const slots = { map: graphHtml(layout(works)) };
+  const slots = {
+    map: graphHtml(layout(works)),
+    works: `<template id="works-data"><ul class="works">${works.map(workItem).join('')}</ul></template>`,
+  };
   const templates = Object.fromEntries(VARIANTS.map((v) => [v, template(v, slots)])) as SiteBundle['templates'];
   const scriptHashes = Object.fromEntries(VARIANTS.map((v) => [v, inlineScriptHashes(templates[v])])) as SiteBundle['scriptHashes'];
   const version = createHash('sha256').update(JSON.stringify({ templates, pages })).digest('hex').slice(0, 12);

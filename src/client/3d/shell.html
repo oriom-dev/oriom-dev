@@ -1,0 +1,23 @@
+<canvas id="view" aria-hidden="true"></canvas>
+<header class="bar">
+  <a class="name" href="/">oriom</a>
+  <nav aria-label="サイト"><a href="/works">実績</a><a href="/blog">記事</a><a href="/badges">バッジ</a><a href="/stats">いま</a></nav>
+  <button type="button" id="read" class="btn">本文を読む</button>
+</header>
+<section id="reader" class="reader" aria-label="本文">
+  <div class="sheet">
+    <button type="button" class="close btn" aria-label="本文を閉じて世界に戻る">世界に戻る</button>
+    <main id="c"><!--@body--></main>
+    <footer class="end">ほかの次元で見る：<a href="__PATH__?v=1d" rel="nofollow">1 次元</a>・<a href="__PATH__?v=2d" rel="nofollow">2 次元</a>・<a href="__MD__">Markdown</a></footer>
+  </div>
+</section>
+<div id="start" class="start" hidden>
+  <p class="t">ブロックの世界を歩く</p>
+  <p class="s">広場の看板にこのページと実績が立っています。地面のランプはクラスタの CPU とメモリです。</p>
+  <p><button type="button" id="go" class="btn">歩いてみる</button> <button type="button" id="read2" class="btn">本文を読む</button></p>
+  <p class="keys">WASD / 矢印で移動・マウスで見回す・Space でジャンプ・F で飛行・クリックか Enter で看板を開く・Esc で止まる</p>
+</div>
+<div class="cross" aria-hidden="true"></div>
+<p id="tip" class="tip" aria-live="polite"></p>
+<div class="touch" aria-hidden="true"><div id="joy" class="joy"><i></i></div><button type="button" id="jump" class="btn jump" tabindex="-1">▲</button></div>
+<!--#works-->

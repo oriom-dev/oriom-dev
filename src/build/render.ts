@@ -34,7 +34,7 @@ export function figure(a: Art, label: string, cls = ''): string {
     + `<svg viewBox="0 0 1000 ${h}" aria-hidden="true"><path d="${d}"/></svg></figure>`;
 }
 
-const workItem = (w: Work) =>
+export const workItem = (w: Work) =>
   `<li><a href="/works/${w.slug}">${w.art ? figure(w.art, w.art.title ?? w.title, 'thumb') : ''}`
   + `<b>${esc(w.title)}</b>${w.date ? `<time datetime="${w.date}">${w.date.slice(0, 4)}</time>` : ''}`
   + `<span>${esc(w.summary)}</span>${w.awards.length ? `<small>受賞 ${w.awards.length}</small>` : ''}</a></li>`;

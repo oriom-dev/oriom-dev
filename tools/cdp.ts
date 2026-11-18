@@ -13,6 +13,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 async function launch(extra: string[] = []) {
   const port = 9300 + Math.floor(Math.random() * 500);
   const dir = mkdtempSync(path.join(tmpdir(), 'cdp-'));
+  process.env.FONTCONFIG_FILE ??= path.resolve(import.meta.dirname, '../.cache/fonts.conf');
   const proc = spawn('chromium', ['--headless=new', '--no-sandbox', `--remote-debugging-port=${port}`, `--user-data-dir=${dir}`, '--window-size=1280,900', ...extra, 'about:blank'], { stdio: 'ignore' });
   let ws = '';
   for (let i = 0; i < 50 && !ws; i++) {
@@ -63,6 +64,9 @@ try {
       if (e.method === 'Runtime.exceptionThrown') console.log('exception:', e.params.exceptionDetails.exception?.description ?? e.params.exceptionDetails.text);
       if (e.method === 'Log.entryAdded') console.log(`log.${e.params.entry.level}:`, e.params.entry.text);
     }
+    if (process.env.EVAL) console.log('eval:', JSON.stringify(await b.evalJs(process.env.EVAL)));
+    const snap = await b.evalJs('new Promise(r => { const t = () => typeof window.__snap === "string" && window.__snap.startsWith("data:") ? r(window.__snap) : setTimeout(t, 200); setTimeout(() => r(null), 5000); t(); })');
+    if (snap) writeFileSync(path.join(OUT, 'snap.png'), Buffer.from(snap.split(',')[1], 'base64'));
     await b.shot(path.join(OUT, 'console.png'));
   }
 } finally {
