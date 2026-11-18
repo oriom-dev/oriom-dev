@@ -71,7 +71,7 @@ timeline
 | 1 次元 | 2 次元 | 3 次元 |
 |:---:|:---:|:---:|
 | <img src=".github/screenshots/1d.webp" alt="1 次元：文字以外がすべて 1 本のベジェ曲線でつながったページ" width="100%"> | <img src=".github/screenshots/2d.webp" alt="2 次元：本文のカードの横に実績の DAG が広がる平面" width="100%"> | <img src=".github/screenshots/3d.webp" alt="3 次元：看板が並ぶ広場のあるブロックの世界" width="100%"> |
-| 細い文字と、余白を流れる **1 本の線**。見出しの下線も、箇条書きの点も、実績の線画も、すべて同じ線。文字の上は決して横切らない | 実績を**時間順の DAG** にして平面に広げ、同じ技術でつながる実績を線で結ぶ。上下左右にスクロールやドラッグで眺める | ノイズから生まれる**無限のブロックの世界**。スポーンの広場は固定、遠くは毎回違う。空は利用者の時刻、地面のランプはクラスタの CPU |
+| 細い文字と、余白を流れる **1 本の線**。見出しの下線も、箇条書きの点も、実績の線画も、接線のつながった同じ線。文字の上は決して横切らない | 実績を**時間順の DAG** にして平面に広げ、同じ技術でつながる実績を線で結ぶ。上下左右にスクロールやドラッグで眺める | ノイズから生まれる**無限のブロックの世界**を、開いた瞬間から歩ける。スポーンの広場は固定、遠くは毎回違う。空は利用者の時刻、地面のランプはクラスタの CPU |
 
 <details>
 <summary><b>🧪 どの環境でも読めるように</b></summary>
@@ -84,6 +84,8 @@ timeline
 | `Accept: text/markdown`、URL 末尾に `.md` | Markdown |
 | `printf 'GET /\r\n' \| nc oriom.dev 80` | HTTP/0.9（ヘッダーなしの本文） |
 | `coap-client coap://oriom.dev/` | CoAP（Markdown、Block2 分割、`/api/stats` は Observe） |
+| `printf '/\r\n' \| nc oriom.dev 70` | Gopher（トップと実績・記事はメニュー、各ページはテキスト） |
+| `gemini://oriom.dev/` | Gemini（gemtext、証明書は TOFU） |
 | オフライン | Service Worker が同じ合成関数でページを組み立てる |
 
 </details>
@@ -95,6 +97,7 @@ flowchart LR
     server -->|HTTP/1.0–3| caddy[Caddy]
     server -->|HTTP/0.9| l4[caddy-l4]
     server -->|CoAP| udp[(UDP 5683)]
+    server -->|Gopher / Gemini| tcp[(TCP 70 / 1965)]
     build --> sw[Service Worker]
     sw -.->|オフラインでも同じ合成| browser((ブラウザ))
     caddy --> browser
@@ -104,6 +107,7 @@ flowchart LR
 - **1 リクエスト・512 KB 以内**：どのページ、どのデザインも、画像やスクリプトを含めて HTML 1 枚に収まります（テストで常に検査）。
 - **毎回違う色**：OKLCH の明度と彩度を全色相で検証済みの値に固定し、色相だけをランダムにしています。どの色でも文字のコントラストは 7:1 以上です。
 - **standard.site**：記事は AT Protocol のレコードとしても公開し、Team JISAKU の記事もこのサイトから読めます。
+- **コメントは Bluesky で**：記事ごとの告知投稿への返信が、そのままコメント欄になります（`bskyPostRef`）。
 
 ### 進捗
 
@@ -113,7 +117,8 @@ flowchart LR
 - [x] 1 次元デザイン（一筆書きのベジェ曲線）
 - [x] 2 次元デザイン（技術の DAG を自由スクロール）
 - [x] 3 次元デザイン（ノイズ生成のボクセル世界・WebGPU / WebGL 2）
-- [x] サーバー（HTTP/0.9–3、CoAP、ランダム配信、ライブ統計）
+- [x] サーバー（HTTP/0.9–3、CoAP、Gopher、Gemini、ランダム配信、ライブ統計）
+- [x] Bluesky の返信をコメント欄に
 - [x] Service Worker / PWA（完全オフライン）
 - [x] standard.site への公開とチーム記事の集約（公開の実行は未）
 - [ ] Open Badges の検証
