@@ -155,6 +155,7 @@ export function postCanvas(it: Item): HTMLCanvasElement {
 /** A board lying on the floor, its top towards -z (read from the spawn, facing north). */
 export function floorQuad(cx: number, y: number, cz: number, w: number, h: number): Float32Array {
   const x0 = cx - w / 2, x1 = cx + w / 2, z0 = cz - h / 2, z1 = cz + h / 2;
+  // read from the south (+z): the text's top edge is the far (north) edge
   return new Float32Array([x0, y, z1, 0, 1, x1, y, z1, 1, 1, x1, y, z0, 1, 0, x0, y, z0, 0, 0]);
 }
 

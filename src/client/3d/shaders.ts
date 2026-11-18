@@ -1,6 +1,6 @@
 // The same shading in WGSL (WebGPU) and GLSL ES 3.0 (WebGL 2). Uniform block layout
 // (floats): viewProj[16] invViewProj[16] cam[4: xyz, time] sun[4: dir, daylight]
-// zenith[4: rgb, fog density] horizon[4: rgb, sunrise/sunset glow] light[4: ambient, lamp glow, night vision, -] moon[4: dir, -].
+// zenith[4: rgb, fog distance] horizon[4: rgb, sunrise/sunset glow] light[4: ambient, lamp glow, night vision, -] moon[4: dir, -].
 // Blocks: 0 air 1 grass 2 dirt 3 stone 4 sand 5 water 6 log 7 leaves 8 snow
 //         9 lamp off 10 lamp on 11 plank 12 gravel
 
@@ -19,7 +19,9 @@ struct U { vp: mat4x4f, ivp: mat4x4f, cam: vec4f, sun: vec4f, zenith: vec4f, hor
 @group(0) @binding(0) var<uniform> u: U;
 var<private> PAL: array<vec3f, 13> = array<vec3f, 13>(${common('wgsl')});
 fn hash3(p: vec3f) -> f32 { return fract(sin(dot(p, vec3f(12.9898, 78.233, 37.719))) * 43758.5453); }
-fn fog(c: vec3f, d: f32) -> vec3f { return mix(c, u.horizon.rgb, (1.0 - exp(-d * u.zenith.w)) * (1.0 - 0.5 * u.light.z)); }
+// fog only near the edge of what is drawn (zenith.w is that distance), as in Minecraft
+fn fogk(d: f32) -> f32 { return smoothstep(u.zenith.w * 0.6, u.zenith.w, d); }
+fn fog(c: vec3f, d: f32) -> vec3f { return mix(c, u.horizon.rgb, fogk(d) * (1.0 - 0.5 * u.light.z)); }
 fn nrm(i: u32) -> vec3f {
   var n = array<vec3f, 6>(vec3f(1,0,0), vec3f(-1,0,0), vec3f(0,1,0), vec3f(0,-1,0), vec3f(0,0,1), vec3f(0,0,-1));
   return n[i];
@@ -90,7 +92,7 @@ struct PO { @builtin(position) pos: vec4f, @location(0) uv: vec2f, @location(1) 
   var t = textureSample(pt, ps, i.uv);
   if (!front) { t = vec4f(PAL[11] * (0.9 + 0.2 * hash3(floor(i.wp * 8.0))), 1.0); } // the back of the board
   let l = 0.55 + 0.45 * max(max(u.light.x * 1.6, u.sun.w), u.light.z);
-  return vec4f(mix(t.rgb * l, u.horizon.rgb, (1.0 - exp(-distance(i.wp, u.cam.xyz) * u.zenith.w)) * 0.6), 1.0);
+  return vec4f(mix(t.rgb * l, u.horizon.rgb, fogk(distance(i.wp, u.cam.xyz))), 1.0);
 }
 `;
 
@@ -99,7 +101,8 @@ precision highp float; precision highp int;
 layout(std140) uniform U { mat4 vp; mat4 ivp; vec4 cam; vec4 sun; vec4 zenith; vec4 horizon; vec4 light; vec4 moon; };
 const vec3 PAL[13] = vec3[13](${common('glsl')});
 float hash3(vec3 p) { return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }
-vec3 fogc(vec3 c, float d) { return mix(c, horizon.rgb, (1.0 - exp(-d * zenith.w)) * (1.0 - 0.5 * light.z)); }
+float fogk(float d) { return smoothstep(zenith.w * 0.6, zenith.w, d); }
+vec3 fogc(vec3 c, float d) { return mix(c, horizon.rgb, fogk(d) * (1.0 - 0.5 * light.z)); }
 `;
 
 export const GL = {
@@ -151,5 +154,5 @@ void main() { gl_Position = vp * vec4(p, 1.0); v = uv; wp = p; }`,
   panelFs: `${GLSL_HEAD}
 uniform sampler2D t; in vec2 v; in vec3 wp; out vec4 o;
 void main() { vec4 c = gl_FrontFacing ? texture(t, v) : vec4(PAL[11] * (0.9 + 0.2 * hash3(floor(wp * 8.0))), 1.0); float l = 0.55 + 0.45 * max(max(light.x * 1.6, sun.w), light.z);
-  o = vec4(mix(c.rgb * l, horizon.rgb, (1.0 - exp(-distance(wp, cam.xyz) * zenith.w)) * 0.6), 1.0); }`,
+  o = vec4(mix(c.rgb * l, horizon.rgb, fogk(distance(wp, cam.xyz))), 1.0); }`,
 };

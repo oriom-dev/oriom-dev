@@ -404,7 +404,7 @@ async function start(): Promise<void> {
   for (let i = 0; i < 40 && world.solidAt(Math.floor(player.p[0]!), Math.floor(player.p[1]!), Math.floor(player.p[2]!)); i++) player.p[1]! += 1;
 
   const u = new Float32Array(UNIFORM_FLOATS);
-  const fog = 1 / (RADIUS * CS * 0.42);
+  const fog = (RADIUS - 0.5) * CS; // where the fog is whole: the edge of the loaded chunks
   let last = performance.now();
   const frame = (now: number) => {
     const dt = Math.min(0.05, (now - last) / 1000);
