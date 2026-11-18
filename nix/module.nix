@@ -86,21 +86,42 @@ in
 
     # HTTP/0.9: a request line without a version is not HTTP/1.x, so caddy-l4's `http`
     # matcher rejects it and it goes to the app (PROXY v2 keeps the client address).
+    # That matcher waits for more data while the first line is shorter than 10 bytes,
+    # so `GET /` up to `GET /abcd` are caught first by exact-length regexps (each reads
+    # exactly n bytes; every HTTP/1.x request is longer, so nothing waits). Routes, not
+    # one route with several matchers, because only routes keep their order. Caddyfile
+    # would read `{2}` as a placeholder, hence the repeated character classes.
     # Every HTTP/1.x request, ACME challenges included, falls through to Caddy as before.
-    services.caddy.globalConfig = lib.mkIf cfg.caddyLayer4 ''
-      servers :80 {
-        listener_wrappers {
-          layer4 {
-            @http09 not http
-            route @http09 {
-              proxy {
-                proxy_protocol v2
-                upstream 127.0.0.1:${toString cfg.http09Port}
-              }
+    services.caddy.globalConfig = lib.mkIf cfg.caddyLayer4 (
+      let
+        c = "[^ \\r\\n]";
+        short = {
+          "6" = "^GET /\\n";
+          "7" = "^GET /(\\r\\n|${c}\\n)";
+          "8" = "^GET /(${c}\\r\\n|${c}${c}\\n)";
+          "9" = "^GET /(${c}${c}\\r\\n|${c}${c}${c}\\n)";
+          "10" = "^GET /(${c}${c}${c}\\r\\n|${c}${c}${c}${c}\\n)";
+        };
+        names = [ "6" "7" "8" "9" "10" ];
+        to = ''
+          {
+            proxy {
+              proxy_protocol v2
+              upstream 127.0.0.1:${toString cfg.http09Port}
+            }
+          }
+        '';
+      in ''
+        servers :80 {
+          listener_wrappers {
+            layer4 {
+              ${lib.concatMapStrings (n: "@h09_${n} regexp \"${short.${n}}\" ${n}\n") names}
+              @h09 not http
+              ${lib.concatMapStrings (n: "route @h09_${n} ${to}") names}
+              route @h09 ${to}
             }
           }
         }
-      }
-    '';
+      '');
   };
 }
