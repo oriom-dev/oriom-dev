@@ -37,6 +37,13 @@ const srgb = (l: number, c: number) =>
   oklchToLinearSrgb(l, c, ICON_HUE).map((v) => Math.round(255 * (v <= 0.0031308 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - 0.055)));
 const hex = (rgb: number[]) => `#${rgb.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
 
+/** The top page's description (content/pages/index.md), so the app says the same. */
+function topDescription(site: SiteBundle): string {
+  const m = /<meta name="description" content="([^"]*)"/.exec(site.pages['/']?.head ?? '');
+  if (!m) throw new Error('the top page has no description');
+  return m[1]!.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+}
+
 /** Everything besides the bundle: service worker, manifest, icons, crawler files. */
 function writeExtras(out: string, site: SiteBundle): void {
   writeFileSync(path.join(out, 'sw.js'), bundleJs(path.join(ROOT, 'src/client/sw.ts')));
@@ -48,7 +55,7 @@ function writeExtras(out: string, site: SiteBundle): void {
   writeFileSync(path.join(out, 'manifest.webmanifest'), JSON.stringify({
     name: 'oriom.dev', short_name: 'oriom', lang: 'ja', start_url: '/', scope: '/', id: '/',
     display: 'standalone', background_color: hex(bg), theme_color: hex(bg),
-    description: '1 次元・2 次元・3 次元のどれかで現れるポートフォリオ。オフラインでも読めます。',
+    description: topDescription(site),
     icons: [
       { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
       { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
