@@ -28,7 +28,10 @@ export class Player {
 
   /** move: [right, forward] in -1..1, up: jump/ascend, down: descend (fly). */
   step(dt: number, move: [number, number], up: boolean, down: boolean, sprint: boolean): void {
-    const inWater = this.world.waterAt(Math.floor(this.p[0]!), Math.floor(this.p[1]! + 0.4), Math.floor(this.p[2]!));
+    const water = (dy: number) => this.world.waterAt(Math.floor(this.p[0]!), Math.floor(this.p[1]! + dy), Math.floor(this.p[2]!));
+    const inWater = water(0.4);
+    // in the water or just out of it (afloat at the surface, or climbing the bank)
+    const wet = inWater || water(-0.6) || water(-1.2);
     const speed = (this.fly ? 11 : sprint ? 6.2 : 4.3) * (inWater && !this.fly ? 0.55 : 1);
     const s = Math.sin(this.yaw), c = Math.cos(this.yaw);
     const wx = move[0] * c - move[1] * s, wz = -move[0] * s - move[1] * c;
@@ -50,6 +53,18 @@ export class Player {
       next[axis]! += this.v[axis]! * dt;
       if (this.collides(next[0]!, next[1]!, next[2]!)) {
         if (axis === 1 && this.v[1]! < 0) this.onGround = true;
+        // swimming into the bank with somewhere to stand within reach: climb out, smoothly,
+        // while pushing on (floating, there is no ground to jump from)
+        if (axis !== 1 && !this.fly && wet && [0.5, 1.01, 1.6].some((dy) => !this.collides(next[0]!, next[1]! + dy, next[2]!))) {
+          this.v[1] = Math.max(this.v[1]!, 4);
+          continue;
+        }
+        // under water against a wall: swim up along it (towards the surface and the bank)
+        if (axis !== 1 && !this.fly && inWater) {
+          this.v[1] = Math.max(this.v[1]!, 2.5);
+          this.v[axis] = 0;
+          continue;
+        }
         // walking into a one-block ledge with room above it: jump, exactly as Space does
         // (no teleport), and keep pushing forward so the jump carries onto it
         if (axis !== 1 && !this.fly && this.onGroundish() && !this.collides(next[0]!, next[1]! + 1.01, next[2]!)) {

@@ -43,3 +43,23 @@ test('a gap one block high does not let you through: the head needs room too', (
   for (let i = 0; i < 120; i++) p.step(1 / 60, [0, 1], false, false, false);
   assert.ok(p.p[0]! < 1.71, `stopped before it: ${p.p[0]}`);
 });
+
+test('out of the water onto the bank, by swimming at it, with or without Space', () => {
+  const SEA = 30;
+  for (const bank of [SEA, SEA + 1]) for (const up of [false, true]) {
+    const world = {
+      solidAt: (x: number, y: number) => (x >= 3 ? y <= bank : y <= SEA - 3), // 3 deep, then the bank
+      waterAt: (x: number, y: number) => x < 3 && y > SEA - 3 && y <= SEA,
+    } as unknown as World;
+    const p = new Player(world);
+    p.p = [0.5, SEA - 1.5, 0.5]; p.yaw = -Math.PI / 2;
+    let lastY = p.p[1]!, maxStep = 0;
+    for (let i = 0; i < 600 && p.p[0]! < 4; i++) {
+      p.step(1 / 60, [0, 1], up, false, false);
+      maxStep = Math.max(maxStep, Math.abs(p.p[1]! - lastY));
+      lastY = p.p[1]!;
+    }
+    assert.ok(p.p[0]! >= 4 && p.p[1]! >= bank + 1 - 0.01, `bank +${bank - SEA}, Space ${up}: ${p.p}`);
+    assert.ok(maxStep < 0.2, `smoothly (largest step ${maxStep.toFixed(3)})`);
+  }
+});
