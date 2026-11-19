@@ -1,6 +1,6 @@
 ---
 title: oriom.dev
-description: oriom のポートフォリオ。Web・モバイル・バックエンド・クラウド・セキュリティ、ときどき量子アニーリング。
+description: oriom のポートフォリオ。Webやモバイルアプリの開発をしたり、量子アニーリングや光ファイバーで遊んでいます。
 ---
 
 # oriom.dev

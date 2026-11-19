@@ -2,7 +2,7 @@
 
 # oriom
 
-**Web・モバイル・バックエンド・クラウド・セキュリティ、ときどき量子アニーリング**
+Webやモバイルアプリの開発をしたり、量子アニーリングや光ファイバーで遊んでいます。
 
 東北大学 工学部 電気情報物理工学科 4 年 · [吉田研究室(微小光学研究室)](https://web.tohoku.ac.jp/yoshida-lab/) · [一般社団法人とんペディア](https://org.tompedia.jp/) 理事（開発担当） · [Team JISAKU](https://jisaku.dev)
 
