@@ -196,6 +196,10 @@ export function head(m: HeadMeta): string {
     `<meta property="og:url" content="${url}">`,
     `<meta property="og:type" content="${m.type ?? 'website'}">`,
     `<meta property="og:site_name" content="${SITE}">`,
+    // a card made by the server for every page (src/server/og.ts)
+    `<meta property="og:image" content="${ORIGIN}/og${m.path === '/' ? '/index' : m.path}.png">`,
+    '<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">',
+    '<meta name="twitter:card" content="summary_large_image">',
     m.published ? `<meta property="article:published_time" content="${m.published}">` : '',
     m.atUri ? `<link rel="site.standard.document" href="${esc(m.atUri)}">` : '',
     publicationUri ? `<link rel="site.standard.publication" href="${esc(publicationUri)}">` : '',

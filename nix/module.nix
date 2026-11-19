@@ -41,6 +41,11 @@ in
       description = "Cluster dashboard agent socket; only an allowlisted summary of it is published.";
     };
     agentGid = lib.mkOption { type = lib.types.nullOr lib.types.int; default = null; description = "Group that may read the agent socket."; };
+    ogFonts = lib.mkOption {
+      type = lib.types.package;
+      default = self.packages.${pkgs.stdenv.hostPlatform.system}.ogFonts;
+      description = "Fonts for the OGP images (og-300.ttf, og-500.ttf).";
+    };
     environmentFile = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;
@@ -62,13 +67,14 @@ in
         ++ lib.optionals (cfg.gopherPort != null) [ "${toString cfg.gopherPort}:7070/tcp" ]
         ++ lib.optionals (cfg.geminiPort != null) [ "${toString cfg.geminiPort}:1965/tcp" ];
       environmentFiles = lib.optional (cfg.environmentFile != null) cfg.environmentFile;
-      volumes = [ "${app}:/app:ro" "/var/lib/oriom-dev:/state" ]
+      volumes = [ "${app}:/app:ro" "/var/lib/oriom-dev:/state" "${cfg.ogFonts}:/fonts:ro" ]
         ++ lib.optional (cfg.agentSocket != null) "${dirOf cfg.agentSocket}:${dirOf cfg.agentSocket}:ro";
       environment = {
         NODE_ENV = "production";
         LISTEN = "0.0.0.0:8080";
         HTTP09_LISTEN = "0.0.0.0:8091";
         STATE_DIR = "/state";
+        OGP_FONTS = "/fonts";
         # the published ports are on the host's loopback only: everything comes from Caddy
         TRUST_PROXY = "1";
       } // lib.optionalAttrs (cfg.coapPort != null) { COAP_PORT = "5683"; }
@@ -81,7 +87,7 @@ in
         "--cap-drop=ALL"
         "--security-opt=no-new-privileges"
         "--pids-limit=128"
-        "--memory=256m"
+        "--memory=384m" # resvg and the OGP fonts take about 90 MB
         "--cpus=0.5"
         "--log-driver=journald"
       ];

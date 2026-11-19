@@ -49,4 +49,5 @@ npm test                         # 512 KB・1 リクエスト・配置・各プ�
 - 管理画面：`ADMIN_PATH=/admin-0123456789abcdef npm run dev` のあと http://127.0.0.1:8080/admin-0123456789abcdef（`localhost` ではなく `127.0.0.1` で開く。サインインせずに画面を試すなら末尾に `?demo`：書き込みはブラウザ内だけ）。本番では HTTPS のときだけ出る
 - 記事のレコード：`site.standard.document` の `content` に `{ "$type": "dev.oriom.markdown", "text": 本文の Markdown }`、`textContent` に平文
 - 3D の看板は HTML-in-Canvas（`<canvas layoutsubtree>` と `drawElementImage`）が使えるブラウザでは HTML 要素をそのまま描き、使えなければ手描きの canvas に戻る。前者の確認は `EXTRA_FLAGS=--enable-experimental-web-platform-features` を付けて tools/cdp.ts を動かす（Chrome では chrome://flags/#canvas-draw-element）
+- OGP 画像：サーバーが `/og/<パス>.png` で作る（src/server/og.ts）。フォントは `nix build .#ogFonts`（数分かかる。`nix develop` では `OGP_FONTS` が自動で入る）。手元では `OGP_FONTS=<そのパス> npm run dev`
 - 線画：`nix develop -c python3 tools/lineart.py [slug]`、一覧は `node tools/artpreview.ts > sheet.svg`

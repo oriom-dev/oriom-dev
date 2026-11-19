@@ -10,6 +10,7 @@ import { resolve } from '../shared/routes.ts';
 import type { PageOut, SiteBundle, Stats, Variant } from '../shared/types.ts';
 import { maybe3d, pickVariant } from '../shared/variant.ts';
 import type { Counter } from './counter.ts';
+import type { OgMaker } from './og.ts';
 
 export interface Req {
   path: string; // path + query as sent
@@ -136,6 +137,8 @@ export class App {
   adminPath = '';
   /** The site's site.standard.publication AT-URI, read from the PDS. */
   publication = '';
+  /** Makes the OGP image of a page (null until its fonts and resvg are loaded). */
+  og: OgMaker | null = null;
   /** Asks for the run-time pages to be read again (after the admin page writes). */
   onRefresh?: () => void;
   private lastRefresh = 0;
@@ -207,6 +210,13 @@ export class App {
     if (url.pathname === '/.well-known/site.standard.publication' && this.publication) {
       // https://standard.site/docs/verification: the publication this site belongs to
       return { status: 200, headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'public, max-age=300', ...SECURITY }, body: this.publication };
+    }
+    const og = /^\/og(\/[^.]*)\.png$/.exec(url.pathname);
+    if (og && this.og) {
+      const page = this.site.pages[og[1] === '/index' ? '/' : og[1]!];
+      if (page) {
+        return { status: 200, headers: { 'content-type': 'image/png', 'cache-control': 'public, max-age=3600', ...SECURITY }, body: this.og(page) };
+      }
     }
     if (url.pathname === '/_/refresh') {
       // anyone may ask; at most once in 10 s, and it only reads public records again

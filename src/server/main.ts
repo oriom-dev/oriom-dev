@@ -10,6 +10,11 @@ const counter = new Counter(env.STATE_DIR ? `${env.STATE_DIR}/counter.json` : un
 const stats = startStats(counter, { agentSocket: env.CLUSTER_AGENT_SOCKET });
 const app = new App(counter, stats, undefined, env.ADMIN_PATH ?? '');
 if (env.NODE_ENV === 'development') app.watch();
+// OGP images: resvg and the fonts load in the background
+import('./og.ts').then(({ ogMaker }) => ogMaker()).then((m) => {
+  app.og = m;
+  if (!m) console.warn('og: no fonts (OGP_FONTS), so no OGP images');
+}).catch((e) => console.warn('og:', e));
 
 // Run-time pages: the site's own posts (on its PDS, written from the admin page), posts
 // from followed standard.site publications, and the Bluesky replies under every post.

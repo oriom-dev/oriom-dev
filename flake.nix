@@ -23,7 +23,7 @@
             fileset = pkgs.lib.fileset.unions [ ./package.json ./package-lock.json ./tsconfig.json ./src ./content ./test ];
           };
           nodejs = pkgs.nodejs_24;
-          npmDepsHash = "sha256-lQmUPiDxb+xCvpgIqWz5DnwENjFKInfaHqu4pj74cC8=";
+          npmDepsHash = "sha256-ck7IV/USX2y2k+DT6q2kTdS+m1ARm8s3ZlPjIixKMK0=";
           npmFlags = [ "--ignore-scripts" ];
           doCheck = true;
           checkPhase = "npm test";
@@ -36,8 +36,18 @@
           '';
         };
 
+        # The OGP images' fonts: Noto Sans CJK JP, two weights, Japanese only, TrueType
+        # (tools/ogfont.py). Slow to make (minutes), so a package of its own: cached.
+        packages.ogFonts = pkgs.runCommand "oriom-dev-og-fonts" {
+          nativeBuildInputs = [ (pkgs.python3.withPackages (ps: [ ps.fonttools ])) ];
+        } ''
+          mkdir -p $out
+          python3 ${./tools/ogfont.py} ${pkgs.noto-fonts-cjk-sans}/share/fonts/opentype/noto-cjk/NotoSansCJK-VF.otf.ttc $out
+        '';
+
         devShells.default = pkgs.mkShell {
           packages = [ pkgs.nodejs_24 artPython pkgs.potrace pkgs.libcoap ];
+          OGP_FONTS = self.packages.${system}.ogFonts;
         };
       }) // {
         nixosModules.default = import ./nix/module.nix self;
