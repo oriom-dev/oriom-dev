@@ -47,7 +47,9 @@ async function launch(extra: string[] = []) {
 }
 
 const [mode, arg] = process.argv.slice(2);
-const b = await launch(mode === 'console' ? ['--enable-unsafe-webgpu', '--enable-features=Vulkan', '--use-angle=swiftshader'] : []);
+// EXTRA_FLAGS='--enable-features=CanvasDrawElement' tries HTML-in-Canvas
+const extra = (process.env.EXTRA_FLAGS ?? '').split(' ').filter(Boolean);
+const b = await launch([...(mode === 'console' ? ['--enable-unsafe-webgpu', '--enable-features=Vulkan', '--use-angle=swiftshader'] : []), ...extra]);
 try {
   if (mode === 'offline') {
     await b.go(`${BASE}/`, 3000);

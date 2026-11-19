@@ -9,9 +9,6 @@ html.world #view{display:block}
 .btn{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:.35rem 1rem;cursor:pointer}
 .btn:hover{background:color-mix(in oklch,var(--line) 18%,var(--bg))}
 html:not(.world) .html-canvas{position:fixed;left:-200vw;top:0}
-.title-card{width:1024px;height:768px;padding:96px 72px;background:var(--bg);color:var(--fg);border:6px solid var(--line);font-family:system-ui,sans-serif}
-.title-card .t{font-size:76px;font-weight:200;line-height:1.2;margin:0 0 40px;padding-bottom:24px;border-bottom:3px solid var(--line)}
-.title-card ul{list-style:none;padding:0;margin:0;font-size:32px;color:var(--muted);line-height:1.6}
 .cross,.tip,.touch{display:none}
 html.world:not(.popped) .cross{display:block;position:fixed;left:50%;top:50%;width:14px;height:14px;margin:-7px;z-index:1;pointer-events:none;background:linear-gradient(var(--fg),var(--fg)) center/2px 100% no-repeat,linear-gradient(var(--fg),var(--fg)) center/100% 2px no-repeat;opacity:.7}
 html.world:not(.popped) .tip:not(:empty){display:block;position:fixed;left:50%;top:calc(50% + 1.5rem);transform:translateX(-50%);z-index:1;margin:0;padding:.2rem .8rem;border-radius:999px;background:color-mix(in oklch,var(--bg) 85%,transparent);font-size:.9em;pointer-events:none;white-space:nowrap}
@@ -34,3 +31,31 @@ html:not(.world) .status{display:none}
 .bar{position:fixed;inset:0 0 auto 0;z-index:3;padding:.5rem 1rem;background:color-mix(in oklch,var(--bg) 80%,transparent);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid color-mix(in oklch,var(--line) 40%,transparent)}
 html:not(.world) .bar{position:static}
 @media (pointer:coarse){.status{display:none}html.world:not(.popped) .touch{display:block}}
+/* signs painted by HTML-in-Canvas: in a viewport-sized box (Chrome skips painting what is off
+   screen, transparent, hidden or in an empty box) but clipped away entirely, all stacked at the corner */
+.html-signs{position:fixed;inset:0;z-index:-1;clip-path:inset(0 0 100% 0);pointer-events:none}
+.html-signs canvas{position:absolute;left:0;top:0}
+.hs{box-sizing:border-box;background:var(--bg);color:var(--fg);border:6px solid var(--line);outline:4px solid var(--bg);outline-offset:-10px;font-family:system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;overflow:hidden;position:relative;margin:0}
+.hs p{margin:0}
+.hs.card{padding:84px 72px}
+.hs.card .t{font-size:76px;font-weight:200;line-height:1;margin-bottom:44px}
+.hs.card .chips{list-style:none;padding:0;margin:0 0 40px;display:flex;flex-wrap:wrap;gap:14px}
+.hs.card .chips li{font-size:30px;font-weight:300;padding:6px 22px;border:2.5px solid var(--line);border-radius:999px;line-height:1.4}
+.hs.card a{color:inherit;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:6px}
+.hs.card .links{list-style:none;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:6px 48px;font-size:32px;font-weight:300}
+.hs.card .links a{text-decoration:none}
+.hs.card .links span{color:var(--muted);margin-left:12px}
+.hs.card .corner{position:absolute;right:72px;bottom:40px;font-size:40px;font-weight:200}
+.hs.work .when,.hs.post .when{color:var(--muted);font-size:20px}
+.hs.work .when{position:absolute;right:30px;top:26px}
+.hs.work .art{position:absolute;left:0;top:0;fill:none;stroke:var(--line);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.hs.work{padding:210px 32px 0}
+.hs.work .title{font-weight:500;line-height:1.2;margin-bottom:6px;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
+.hs.work .summary{color:var(--muted);font-size:20px;font-weight:300;line-height:27px;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
+.hs.work .stat{position:absolute;right:32px;bottom:28px;font-size:24px}
+.hs.post{padding:30px 32px}
+.hs.post .when{font-size:22px;margin-bottom:12px}
+.hs.post .title{font-size:36px;line-height:46px;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;margin-bottom:8px}
+.hs.post .summary{color:var(--muted);font-size:21px;font-weight:300;line-height:30px;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:5;overflow:hidden}
+.hs.line{display:flex;align-items:center;padding:0 28px;font-weight:300;white-space:nowrap}
+.hs.line.centred{justify-content:center;padding:0}

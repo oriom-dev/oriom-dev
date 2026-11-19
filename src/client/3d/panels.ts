@@ -4,7 +4,7 @@
 import { parseArtAttr, separatePath } from '../../shared/art.ts';
 import type { Item } from '../../shared/types.ts';
 
-export interface Sign { id: number; quad: Float32Array; canvas: HTMLCanvasElement; href?: string; label: string; center: number[]; normal: number[]; w: number; h: number }
+export interface Sign { id: number; quad: Float32Array; canvas: HTMLCanvasElement; href?: string; label: string; center: number[]; normal: number[]; w: number; h: number; areas?: Area[] }
 
 const css = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 const FONT = 'system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif';
@@ -47,47 +47,70 @@ function frame(ctx: CanvasRenderingContext2D, W: number, H: number): void {
   ctx.strokeRect(10, 10, W - 20, H - 20);
 }
 
-/** The title card: the name and where its owner belongs. A real element, so
- *  HTML-in-Canvas can paint it. */
-export function titleCard(title: string, lines: string[]): HTMLElement {
-  const el = document.createElement('div');
-  el.className = 'title-card';
-  const h = document.createElement('p');
-  h.className = 't';
-  h.textContent = title;
-  const ul = document.createElement('ul');
-  for (const n of lines) ul.append(Object.assign(document.createElement('li'), { textContent: n }));
-  el.append(h, ul);
-  return el;
-}
-
 /** When: the date, the school year, or "進行中" for work without an end. */
 export const when = (it: Item) => (it.date ? (it.date.length === 4 ? `${it.date} 年度` : it.date) : '進行中');
 
 /** The same card drawn by hand, for browsers without HTML-in-Canvas. `corner` is a
  *  number in the bottom right (the visit counter). */
-export function cardCanvas(card: HTMLElement, corner = ''): HTMLCanvasElement {
-  const W = 1024, H = 768;
+/** A run of text, linked or not (an affiliation can be partly a link, as in 2D). */
+export interface Run { text: string; href?: string }
+export interface Intro { affiliations: Run[][]; links: { label: string; handle: string; href: string }[] }
+/** A link on a sign, in its canvas's pixels. */
+export interface Area { x: number; y: number; w: number; h: number; href: string; label: string }
+
+/** The top page's intro, as the 2D page lays it out: the name, the affiliations as
+ *  chips (links underlined), the links with their handles, and the visit count. */
+export function cardCanvas(intro: Intro, corner = ''): { canvas: HTMLCanvasElement; areas: Area[] } {
+  const W = 1024, H = 768, L = 72, R = W - 72;
   const cv = Object.assign(document.createElement('canvas'), { width: W, height: H });
   const ctx = cv.getContext('2d')!;
+  const fg = css('--fg') || '#000', muted = css('--muted') || '#666', line = css('--line') || '#888';
+  const areas: Area[] = [];
   frame(ctx, W, H);
-  ctx.fillStyle = css('--fg') || '#000';
-  ctx.textBaseline = 'top';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = fg;
   ctx.font = `200 76px ${FONT}`;
-  const y = wrap(ctx, card.querySelector('.t')?.textContent ?? '', 72, 96, W - 144, 92, 380);
-  ctx.strokeStyle = css('--line') || '#888';
-  ctx.lineWidth = 3;
-  ctx.beginPath(); ctx.moveTo(72, y + 24); ctx.lineTo(W - 72, y + 24); ctx.stroke();
-  ctx.fillStyle = css('--fg') || '#000';
-  ctx.font = `300 34px ${FONT}`;
-  let ly = y + 60;
-  for (const li of card.querySelectorAll('li')) { ctx.fillText(`・${li.textContent ?? ''}`, 72, ly, W - 144); ly += 54; }
+  ctx.fillText('oriom.dev', L, 128);
+  // chips
+  const CH = 56, PAD = 22, GAP = 14;
+  ctx.font = `300 30px ${FONT}`;
+  let x = L, y = 210;
+  for (const runs of intro.affiliations) {
+    const widths = runs.map((r) => ctx.measureText(r.text).width);
+    const w = widths.reduce((a, b) => a + b, 0) + PAD * 2;
+    if (x + w > R && x > L) { x = L; y += CH + GAP; }
+    ctx.strokeStyle = line; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.roundRect(x, y, w, CH, CH / 2); ctx.stroke();
+    let tx = x + PAD;
+    runs.forEach((r, k) => {
+      ctx.fillStyle = fg;
+      ctx.fillText(r.text, tx, y + CH / 2 + 1);
+      if (r.href) {
+        ctx.fillRect(tx, y + CH / 2 + 18, widths[k]!, 2);
+        areas.push({ x: tx - 6, y, w: widths[k]! + 12, h: CH, href: r.href, label: r.text.trim() });
+      }
+      tx += widths[k]!;
+    });
+    x += w + GAP;
+  }
+  // links: the name, then the handle in the muted colour
+  x = L; y += CH + 52;
+  ctx.font = `300 32px ${FONT}`;
+  for (const l of intro.links) {
+    const a = ctx.measureText(l.label).width, gap = 12, b = ctx.measureText(l.handle).width;
+    if (x + a + gap + b > R && x > L) { x = L; y += 56; }
+    ctx.fillStyle = fg; ctx.fillText(l.label, x, y);
+    ctx.fillStyle = muted; ctx.fillText(l.handle, x + a + gap, y);
+    areas.push({ x: x - 8, y: y - 28, w: a + gap + b + 16, h: 56, href: l.href, label: `${l.label} ${l.handle}` });
+    x += a + gap + b + 48;
+  }
   if (corner) {
     ctx.textAlign = 'right';
+    ctx.fillStyle = fg;
     ctx.font = `200 40px ${FONT}`;
-    ctx.fillText(corner, W - 72, H - 110);
+    ctx.fillText(corner, R, H - 80);
   }
-  return cv;
+  return { canvas: cv, areas };
 }
 
 /** A work's or a badge's sign: when, its line drawing, title and summary, and its
@@ -185,31 +208,69 @@ export function plaqueCanvas(text: string): HTMLCanvasElement {
   return cv;
 }
 
-/**
- * HTML-in-Canvas: when supported, the title card is a real element inside a
- * `<canvas layoutsubtree>` and is painted from the DOM. Returns null when the API is missing.
- */
-export function htmlCanvas(el: HTMLElement, onPaint: (c: HTMLCanvasElement) => void): HTMLCanvasElement | null {
-  const proto = CanvasRenderingContext2D.prototype as any;
-  const draw = proto.drawElementImage ?? proto.drawElement;
-  if (!draw) return null;
-  const cv = document.createElement('canvas');
-  cv.setAttribute('layoutsubtree', '');
-  cv.width = 1024; cv.height = 768;
-  cv.className = 'html-canvas';
-  cv.setAttribute('aria-hidden', 'true'); // the same title is in the header and the reader
-  document.body.append(cv);
-  cv.append(el);
-  const ctx = cv.getContext('2d')!;
-  const paint = () => {
-    try {
-      frame(ctx, cv.width, cv.height);
-      draw.call(ctx, el, 0, 0);
-      onPaint(cv);
-    } catch { /* API shape changed: keep the hand-drawn sign */ }
-  };
-  cv.addEventListener('paint', paint);
-  (cv as any).requestPaint?.();
-  requestAnimationFrame(paint);
-  return cv;
+
+// ---------------------------------------------------------------- the same signs as HTML
+// (painted by HTML-in-Canvas where the browser can: html.ts; style.css .html-signs)
+const el = (tag: string, cls = '', text = '') => {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text) e.textContent = text;
+  return e;
+};
+
+/** The title card from the top page's intro (its lists, links and all) and the visits. */
+export function cardEl(intro: DocumentFragment | undefined, corner: HTMLElement): HTMLElement {
+  const box = el('div', 'hs card');
+  box.append(el('p', 't', 'oriom.dev'));
+  const chips = intro?.querySelector('ul:not(.links)')?.cloneNode(true) as HTMLElement | undefined;
+  const links = intro?.querySelector('ul.links')?.cloneNode(true) as HTMLElement | undefined;
+  if (chips) { chips.className = 'chips'; box.append(chips); }
+  if (links) box.append(links);
+  corner.className = 'corner';
+  box.append(corner);
+  return box;
+}
+
+const titleSize = (title: string) => {
+  const ctx = document.createElement('canvas').getContext('2d')!;
+  ctx.font = `500 34px ${FONT}`;
+  const long = ctx.measureText(title).width / (512 - 64);
+  return long > 2.6 ? 22 : long > 1.6 ? 27 : 34;
+};
+
+/** A work's or a badge's sign. `stat` is updated in place for live numbers. */
+export function workEl(it: Item, stat: HTMLElement): HTMLElement {
+  const box = el('div', 'hs work');
+  box.append(el('p', 'when', when(it)));
+  if (it.art) {
+    const art = parseArtAttr(it.art);
+    const W = 512, boxH = 170, s = Math.min((W - 120) / 1000, boxH / (1000 / art.aspect));
+    const ox = (W - 1000 * s) / 2, oy = 36 + (boxH - (1000 / art.aspect) * s) / 2;
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'art'); svg.setAttribute('width', '512'); svg.setAttribute('height', '220');
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', separatePath(art, s, ox, oy));
+    svg.append(path);
+    box.append(svg);
+  }
+  const t = el('p', 'title', it.title);
+  t.style.fontSize = `${titleSize(it.title)}px`;
+  box.append(t, el('p', 'summary', it.summary));
+  stat.className = 'stat';
+  box.append(stat);
+  return box;
+}
+
+/** A post's sign. */
+export function postEl(it: Item): HTMLElement {
+  const box = el('div', 'hs post');
+  box.append(el('p', 'when', `${when(it)}${it.by ? `・${it.by}` : ''}`), el('p', 'title', it.title), el('p', 'summary', it.summary));
+  return box;
+}
+
+/** One line on a plain board; `size` in pixels. A year's plaque is centred. */
+export function textEl(text: string, size: number, centred = false): HTMLElement {
+  const box = el('div', `hs line${centred ? ' centred' : ''}`, text);
+  box.style.fontSize = `${size}px`;
+  return box;
 }

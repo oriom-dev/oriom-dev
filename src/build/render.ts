@@ -81,6 +81,7 @@ const LINKS = [
   ['GitHub', 'https://github.com/oriom-dev', '@oriom-dev'],
   ['Bluesky', 'https://bsky.app/profile/oriom.dev', '@oriom.dev'],
   ['Team JISAKU', 'https://jisaku.dev', 'jisaku.dev'],
+  ['メール', 'mailto:me.1@oriom.dev', 'me.1@oriom.dev'],
 ] as const;
 
 /** A section of the top page that can be linked as /#id. */

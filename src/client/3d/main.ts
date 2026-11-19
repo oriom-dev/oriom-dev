@@ -12,7 +12,8 @@ import { moon as moonPos, place, sun as sunPos, toVector } from './astro.ts';
 import { FIRST_RING, firstSeat, ringLayout } from './layout.ts';
 import { forward, invert, mul, perspective, view } from './math.ts';
 import { meshChunk } from './mesh.ts';
-import { cardCanvas, floorQuad, htmlCanvas, plaqueCanvas, postCanvas, quadAt, type Sign, textCanvas, titleCard, workCanvas } from './panels.ts';
+import { HTML_IN_CANVAS, paintHtml } from './html.ts';
+import { type Area, cardCanvas, cardEl, floorQuad, type Intro, plaqueCanvas, postCanvas, postEl, quadAt, type Run, type Sign, textCanvas, textEl, workCanvas, workEl } from './panels.ts';
 import { Player } from './player.ts';
 import type { Renderer } from './render.ts';
 import { UNIFORM_FLOATS } from './render.ts';
@@ -61,17 +62,33 @@ const sign = (s: Omit<Sign, 'id' | 'quad'> & { offset?: number }) => {
   signs.push(sg);
   return sg;
 };
+/** Where the browser can, a sign's face is its element painted by HTML-in-Canvas (and
+ *  painted again whenever the element changes); elsewhere the hand-drawn canvas stays. */
+type Face = { id: number; quad: Float32Array; canvas: HTMLCanvasElement; areas?: Area[] };
+const face = (f: Face, el: HTMLElement, W: number, H: number): (() => void) | null =>
+  HTML_IN_CANVAS ? paintHtml(el, W, H, (cv, areas) => { f.canvas = cv; if (f.areas) f.areas = areas; renderer?.setPanel(f.id, f.quad, cv); }) : null;
 const post = (x: number, z: number, top: number) => { for (let y = PLAZA_Y + 1; y <= top; y++) world.overrides.set(`${x},${y},${z}`, B.Log); };
 
-// straight ahead: the name, and where its owner belongs (the top page's first list)
-const intro = document.querySelector<HTMLTemplateElement>('template#intro')?.content;
-const affiliations = [...(intro?.querySelectorAll('ul:first-of-type > li') ?? [])].map((li) => li.textContent?.trim() ?? '').filter(Boolean);
-const card = titleCard('oriom.dev', affiliations);
-const titleSign = sign({ canvas: cardCanvas(card), label: '', center: [0.5, PLAZA_Y + 3.7, -5], normal: [0, 0, 1], w: 5.6, h: 4.2 });
+// straight ahead: the top page's intro as 2D shows it (affiliations as chips, the links),
+// each link on it clickable
+const introEl = document.querySelector<HTMLTemplateElement>('template#intro')?.content;
+const runsOf = (li: Element): Run[] => [...li.childNodes].map((n) =>
+  n instanceof HTMLAnchorElement ? { text: n.textContent ?? '', href: n.getAttribute('href') ?? '' } : { text: n.textContent ?? '' }).filter((r) => r.text.trim());
+const intro: Intro = {
+  affiliations: [...(introEl?.querySelectorAll('ul:not(.links) > li') ?? [])].map(runsOf),
+  links: [...(introEl?.querySelectorAll('ul.links a') ?? [])].map((a) => ({
+    label: (a.firstChild?.textContent ?? '').trim(), handle: a.querySelector('span')?.textContent ?? '', href: a.getAttribute('href') ?? '',
+  })),
+};
+const card0 = cardCanvas(intro);
+const titleSign = sign({ canvas: card0.canvas, areas: card0.areas, label: '', center: [0.5, PLAZA_Y + 3.7, -5], normal: [0, 0, 1], w: 5.6, h: 4.2 });
+const visitsEl = document.createElement('p');
+face(titleSign, cardEl(introEl, visitsEl), 1024, 768);
 post(-2, -6, PLAZA_Y + 1); post(2, -6, PLAZA_Y + 1);
 
 // works, posts and badges, newest first, round the arcs; each year starts with a plaque
 const itemSigns: Sign[] = [];
+const statEls = new Map<number, HTMLElement>(); // item index -> its live number
 let prevSeat = -1;
 seq.forEach((it, k) => {
   if (!it) return;
@@ -80,18 +97,26 @@ seq.forEach((it, k) => {
   const bx = Math.floor(sl.x), bz = Math.floor(sl.z);
   post(bx, bz, PLAZA_Y + 1);
   const center = [bx + 0.5, PLAZA_Y + 3.05, bz + 0.5], normal = [sl.nx, 0, sl.nz];
-  itemSigns.push(sign({
+  const sg = sign({
     canvas: it.kind === 'post' ? postCanvas(it) : workCanvas(it),
     href: it.path,
     label: `${it.title} を開く`,
     center, normal, w: 2.4, h: 1.8,
-  }));
+  });
+  itemSigns.push(sg);
+  if (it.kind === 'post') face(sg, postEl(it), 512, 384);
+  else {
+    const st = document.createElement('p');
+    statEls.set(i, st);
+    face(sg, workEl(it, st), 512, 384);
+  }
   const prev = items[i - 1];
   const prevRing = prevSeat < 0 ? -1 : layout.slots[prevSeat]!.ring;
   prevSeat = k;
   if (!prev || yearOf(prev) !== yearOf(it) || prevRing !== sl.ring) {
     // the year's signs go on to the left of this one (the arcs run left to right behind you)
-    sign({ canvas: plaqueCanvas(`← ${yearOf(it)}`), label: '', center: [center[0]!, PLAZA_Y + 1.5, center[2]!], normal, w: 1.1, h: 0.55, offset: 0.76 }); // clear of the block corners when it faces the plaza at an angle
+    const pl = sign({ canvas: plaqueCanvas(`← ${yearOf(it)}`), label: '', center: [center[0]!, PLAZA_Y + 1.5, center[2]!], normal, w: 1.1, h: 0.55, offset: 0.76 }); // clear of the block corners when it faces the plaza at an angle
+    face(pl, textEl(`← ${yearOf(it)}`, 56, true), 256, 128);
   }
 });
 
@@ -103,6 +128,8 @@ seq.forEach((it, k) => {
 const LAMP_X0 = -4, LAMP_Z0 = -2, MAX_NODES = 6;
 const FLOOR = PLAZA_Y + 1.02;
 const notePanel = { id: 999, quad: floorQuad(0.5, FLOOR, -3.2, 4.4, 0.8), canvas: textCanvas('↓ 今のサーバーのリソース', 768, 128, 60) };
+face(notePanel, textEl('↓ 今のサーバーのリソース', 60), 768, 128);
+const rowFaces = new Map<number, { el: HTMLElement; drop: (() => void) | null }>(); // HTML-in-Canvas boards by row
 let lampRows = 0; // rows currently on the floor
 const lampChunks = (rows: number) => {
   const keys = new Set<string>();
@@ -157,23 +184,41 @@ function applyStats(s: Stats | null): void {
       if (row < rows) world.overrides.set(key, v > k * 10 + 1 ? B.LampOn : B.LampOff);
       else world.overrides.delete(key); // a node went away: back to the plaza floor
     }
-    if (row < rows) {
-      renderer?.setPanel(1000 + row, floorQuad(LAMP_X0 - 1.75, FLOOR, z + 0.5, 3.3, 0.8), textCanvas(`${n!.name} ${row % 2 ? 'メモリ' : 'CPU'}`, 512, 124, 46));
-    } else renderer?.dropPanel(1000 + row);
+    const label = n ? `${n.name} ${row % 2 ? 'メモリ' : 'CPU'}` : '';
+    const quad = floorQuad(LAMP_X0 - 1.75, FLOOR, z + 0.5, 3.3, 0.8);
+    if (row < rows && HTML_IN_CANVAS) {
+      const f = rowFaces.get(row);
+      if (f) f.el.textContent = label; // painted again by itself
+      else {
+        const el = textEl(label, 46);
+        rowFaces.set(row, { el, drop: face({ id: 1000 + row, quad, canvas: textCanvas(label, 512, 124, 46) }, el, 512, 124) });
+      }
+    } else if (row < rows) renderer?.setPanel(1000 + row, quad, textCanvas(label, 512, 124, 46));
+    else {
+      rowFaces.get(row)?.drop?.();
+      rowFaces.delete(row);
+      renderer?.dropPanel(1000 + row);
+    }
   }
   const touched = lampChunks(Math.max(rows, lampRows));
   lampRows = rows;
-  titleSign.canvas = cardCanvas(card, s.views != null ? `訪問 ${nf.format(s.views)}` : '');
+  const visits = s.views != null ? `訪問 ${nf.format(s.views)}` : '';
+  visitsEl.textContent = visits; // HTML-in-Canvas paints the change itself
+  if (!HTML_IN_CANVAS) {
+    ({ canvas: titleSign.canvas, areas: titleSign.areas } = cardCanvas(intro, visits));
+    renderer?.setPanel(titleSign.id, titleSign.quad, titleSign.canvas);
+  }
   items.forEach((it, i) => {
     if (!it.stat) return;
+    const text = statText(it.stat);
+    const st = statEls.get(i);
+    if (st && st.textContent !== text) st.textContent = text;
+    if (HTML_IN_CANVAS) return;
     const sg = itemSigns[i]!;
-    sg.canvas = workCanvas(it, statText(it.stat));
+    sg.canvas = workCanvas(it, text);
     renderer?.setPanel(sg.id, sg.quad, sg.canvas);
   });
-  if (renderer) {
-    renderer.setPanel(titleSign.id, titleSign.quad, titleSign.canvas);
-    for (const key of touched) if (loaded.has(key)) dirty.add(key);
-  }
+  if (renderer) for (const key of touched) if (loaded.has(key)) dirty.add(key);
 }
 
 // ---------------------------------------------------------------- chunks
@@ -354,7 +399,9 @@ function compass(yaw: number): void {
 
 // ---------------------------------------------------------------- picking
 let viewProj = new Float32Array(16);
-function aimed(sx?: number, sy?: number): Sign | null {
+/** What the crosshair (or the pointer at sx, sy) is on: a sign, or a link on one. */
+interface Aim { href: string; label: string }
+function aimed(sx?: number, sy?: number): Aim | null {
   const eye = [player.p[0]!, player.p[1]! + player.eye, player.p[2]!];
   let dir = forward(player.yaw, player.pitch);
   if (sx !== undefined && sy !== undefined) {
@@ -365,9 +412,9 @@ function aimed(sx?: number, sy?: number): Sign | null {
     const l = Math.hypot(p[0]! - eye[0]!, p[1]! - eye[1]!, p[2]! - eye[2]!);
     dir = [(p[0]! - eye[0]!) / l, (p[1]! - eye[1]!) / l, (p[2]! - eye[2]!) / l];
   }
-  let best: Sign | null = null, bestT = 14;
+  let best: Aim | null = null, bestT = 14;
   for (const s of signs) {
-    if (!s.href) continue;
+    if (!s.href && !s.areas?.length) continue;
     const n = s.normal;
     const denom = dir[0]! * n[0]! + dir[2]! * n[2]!;
     if (denom >= -1e-3) continue; // looking at its back or edge-on
@@ -375,12 +422,21 @@ function aimed(sx?: number, sy?: number): Sign | null {
     if (t <= 0 || t >= bestT) continue;
     const hit = [eye[0]! + dir[0]! * t, eye[1]! + dir[1]! * t, eye[2]! + dir[2]! * t];
     const along = (hit[0]! - s.center[0]!) * n[2]! - (hit[2]! - s.center[2]!) * n[0]!;
-    if (Math.abs(along) <= s.w / 2 && Math.abs(hit[1]! - s.center[1]!) <= s.h / 2) { best = s; bestT = t; }
+    if (Math.abs(along) > s.w / 2 || Math.abs(hit[1]! - s.center[1]!) > s.h / 2) continue;
+    if (s.href) { best = { href: s.href, label: s.label }; bestT = t; continue; }
+    // a link on the sign: the hit in the canvas's pixels
+    const px = (0.5 + along / s.w) * s.canvas.width, py = (0.5 - (hit[1]! - s.center[1]!) / s.h) * s.canvas.height;
+    const a = s.areas!.find((r) => px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h);
+    if (a) { best = { href: a.href, label: a.label }; bestT = t; }
   }
   return best;
 }
-function activate(s: Sign | null): void {
-  if (s?.href) popup.open(s.href, { show: true });
+/** Pages of the site open in the popup; mail in the mail app; other sites in a new tab. */
+function activate(a: Aim | null): void {
+  if (!a) return;
+  if (a.href.startsWith('/')) popup.open(a.href, { show: true });
+  else if (a.href.startsWith('mailto:')) location.href = a.href;
+  else window.open(a.href, '_blank', 'noopener');
 }
 
 // ---------------------------------------------------------------- start
@@ -402,7 +458,6 @@ async function start(): Promise<void> {
   for (const s of signs) r.setPanel(s.id, s.quad, s.canvas);
   r.setPanel(notePanel.id, notePanel.quad, notePanel.canvas);
   // HTML-in-Canvas: when available the big sign shows the live DOM itself
-  htmlCanvas(card, (cv) => r.setPanel(titleSign.id, titleSign.quad, cv));
   applyStats(readStats());
   document.addEventListener('stats', (e) => applyStats((e as CustomEvent<Stats>).detail));
 
