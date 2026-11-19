@@ -30,6 +30,8 @@
           installPhase = ''
             runHook preInstall
             npm prune --omit=dev --ignore-scripts
+            # prune leaves the scope directories of what it removed, empty
+            find node_modules -mindepth 1 -maxdepth 1 -type d -empty -delete
             mkdir -p $out/lib/oriom-dev
             cp -r dist src content package.json node_modules $out/lib/oriom-dev/
             runHook postInstall
